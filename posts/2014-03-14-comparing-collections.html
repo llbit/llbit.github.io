@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Comparing Collections</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16" type="image/vnd.microsoft.icon">
+<link href="/assets/style.css" rel="stylesheet" type="text/css">
+<link href="/assets/highlight.css" rel="stylesheet" type="text/css">
+
+</head>
+<a name="top"></a>
+<body>
+    <header id="header">
+        <div class="column">
+        <a href="/" id="site-title">Low-Level Bits</a>
+        </div>
+    </header>
+    <div class="column">
+        <main>
+          <h1>Comparing Collections</h1>
+<!-- date={2014-03-14} -->
+
+<p>In a project I'm currently working on I had to compare two <a href="http://docs.oracle.com/javase/7/docs/api/java/util/Collection.html">Java
+Collections</a> to see if they contained the same elements, ignoring element
+order. The usual place for such general Collection-related library functions is
+<a href="http://docs.oracle.com/javase/7/docs/api/java/util/Collections.html">java.util.Collections</a> however a fitting method was not found there.</p>
+<h2>Apache Commons Algorithm</h2>
+<p><a href="http://stackoverflow.com/a/1167234/1250278">An answer on Stack Overflow</a> pointed me to a method in an Apache Commons
+library which did exactly what I wanted. The method is called
+<code>isEqualCollection</code> and the implementation I looked at can be found in Apache
+Commons Collections 4.0. The Apache library uses this algorithm to compare two
+collections A and B:</p>
+<ol>
+<li>Test that both A and B have equal size. If the sizes differ then A is not
+   equal to B and we are done.</li>
+<li>Build a frequency table for collection A.</li>
+<li>Build a frequency table for collection B.</li>
+<li>Test that both frequency tables have the same number of rows, if not then A
+   is not equal to B and we are done.</li>
+<li>For each element in the frequency table of A, check that the element has the
+   same frequency as in B (by lookup in the frequency table of B).</li>
+</ol>
+<h2>Improved Algorithm</h2>
+<p>I saw some improvements that could be made on the Apache Commons algorithm above.</p>
+<p>The frequency tables give the number of times an element x occurs in each
+collection. We can improve the memory usage of the algorithm by using a single
+frequency table rather than two. Let <code>fA(x)</code> be the number of occurrences of x
+in A, and let <code>fB(x)</code> be the number of occurrences of x in B. We only need to
+compute the difference <code>d(x) = fA(x)-fB(x)</code>. If there is any x for which <code>d(x)</code>
+is not zero, then x occurs more times in A (<code>d(x) &gt; 0</code>) or B (<code>d(x) &lt; 0</code>). The
+modified algorithm stores <code>d(x)</code> in a frequency table which is initialized by
+counting occurrences of elements in A, as in step 2 above, then for each
+element in B we subtract one from the frequency count of the element.</p>
+<p>Using a single frequency table still requires iteration over both collections
+in order to populate the frequency table correctly, but we now have an easy way
+to add a fail-fast condition while iterating over elements in B. If we notice
+that the frequency of any element drops below zero then we know that the
+element occurs more often in B. This new condition may improve the average
+running time, but it does not affect the asymptotic worst-case running time.</p>
+<p>An improvement in the worst-case running time is gained by completely removing
+the final loop. It is not immediately obvious that it is possible to remove the
+final loop, but I wrote a <a href="https://github.com/llbit/collection-comparison#correctness-proof-sketch">sketch of a correctness proof in the README for my
+code on GitHub</a>.  The idea is that the extra check during iteration over B
+while updating the frequency table together with the first check testing that
+both collections have the same size is sufficient to ensure that A is equal to
+B.</p>
+<p>Let's review the improved algorithm:</p>
+<ol>
+<li>Test that both A and B have equal size, if the sizes differ then A is not
+   equal to B and we are done.</li>
+<li>Build a frequency table for collection A.</li>
+<li>For each element x in B:<ul>
+<li>Subtract one from row x in the frequency table.</li>
+<li>If the frequency of x is now negative then A is not equal to B.</li>
+</ul>
+</li>
+<li>If the algorithm did not already terminate, then A and B are equal.</li>
+</ol>
+<h2>Implementation</h2>
+<p>Below is my implementation of the improved algorithm. Note that I use a
+<code>HashMap</code> to implement the frequency table, it may be replaced by an
+<a href="http://en.wikibooks.org/wiki/Java_Programming/Comparing_Objects"><code>IdentityHashMap</code></a> if you wish to use <a href="http://en.wikibooks.org/wiki/Java_Programming/Comparing_Objects">reference equality rather than
+object equality</a> as the element equality condition.</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">boolean</span><span class="w"> </span><span class="nf">isEqualCollection</span><span class="p">(</span><span class="n">Collection</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">Collection</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="na">size</span><span class="p">()</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="na">size</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">Map</span><span class="o">&lt;</span><span class="n">Object</span><span class="p">,</span><span class="w"> </span><span class="n">Integer</span><span class="o">&gt;</span><span class="w"> </span><span class="n">map</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">HashMap</span><span class="o">&lt;&gt;</span><span class="p">();</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">Object</span><span class="w"> </span><span class="n">o</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">a</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">Integer</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">map</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">o</span><span class="p">);</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">count</span><span class="p">;</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">val</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">val</span><span class="p">.</span><span class="na">intValue</span><span class="p">();</span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="n">map</span><span class="p">.</span><span class="na">put</span><span class="p">(</span><span class="n">o</span><span class="p">,</span><span class="w"> </span><span class="n">Integer</span><span class="p">.</span><span class="na">valueOf</span><span class="p">(</span><span class="n">count</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">));</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">Object</span><span class="w"> </span><span class="n">o</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">Integer</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">map</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">o</span><span class="p">);</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">count</span><span class="p">;</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">val</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">val</span><span class="p">.</span><span class="na">intValue</span><span class="p">();</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">count</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="n">map</span><span class="p">.</span><span class="na">put</span><span class="p">(</span><span class="n">o</span><span class="p">,</span><span class="w"> </span><span class="n">Integer</span><span class="p">.</span><span class="na">valueOf</span><span class="p">(</span><span class="n">count</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">));</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">true</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>In conclusion, the above implementation is more efficient than the Apache
+Commons implementation because it uses less memory (by using only one
+<code>HashMap</code>, rather than two), and avoids the final loop of the Apache algorithm.
+My algorithm can also return <code>false</code> faster than the Apache algorithm.</p>
+<h2>Revisions</h2>
+<ul>
+<li>Update (2016): I published a Git repository with my algorithm and tests <a href="https://github.com/llbit/collection-comparison">on GitHub</a>.</li>
+<li>Update (2016, #2): I revised my original algorithm: I found that it was
+possible to remove the check of the frequency table after iterating over the B
+collection. The algorithm description here has been updated. See the
+correctness proof sketch in the README of the Git repository for details.</li>
+<li>Update (2022): Removed redundant type arguments to <code>HashMap</code>.</li>
+</ul>
+        </main>
+        <footer>Posted on 2014-03-14<br/>Copyright &copy; Jesper Öqvist</footer>
+    </div>
+  </table>
+</body>
+</html>

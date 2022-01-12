@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Declaration Chains for Name Analysis</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16" type="image/vnd.microsoft.icon">
+<link href="/assets/style.css" rel="stylesheet" type="text/css">
+<link href="/assets/highlight.css" rel="stylesheet" type="text/css">
+
+</head>
+<a name="top"></a>
+<body>
+    <header id="header">
+        <div class="column">
+        <a href="/" id="site-title">Low-Level Bits</a>
+        </div>
+    </header>
+    <div class="column">
+        <main>
+          <h1>Declaration Chains for Name Analysis</h1>
+<!-- date={2023-09-17} -->
+
+<p>I made a very nice and efficient name analysis system for a compiler that I am
+working on.  I have not seen this method of doing name analysis before so I
+will try to describe how it works in this post. It is possible that this is a
+common idea that I just have not encountered before.</p>
+<p>In name analysis it is common to use one hash table for each name scope, but in
+my system I use only a single hash table and two stacks.</p>
+<p>The idea is to store name bindings in declaration chains: each declaration node
+having a pointer to the previous declaration. The previous declaration points
+to the previously declared name from the point of the new declaration.</p>
+<p>The declaration chains are kept intact after name analysis is finished so that
+I can use the chains to iterate over visible names. Name uses are bound to
+declaration chains so that call resolution and duplicate declaration checking
+can be done with the declaration chain.</p>
+<p>In my case the AST nodes are objects of <code>struct AstNode</code>. This contains
+declaration chains as <a href="intrusive lists">intrusive singly linked lists</a> with a
+pointer pointing to the previous declaration:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">AstNode</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="p">...</span>
+<span class="w">  </span><span class="n">AstNode</span><span class="o">*</span><span class="w"> </span><span class="n">prev_decl</span><span class="p">;</span><span class="w"> </span><span class="c1">// Previous declaration with same name.</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<p><img alt="prev_decl pointers illustrated in a simple program" src="/assets/prev_decl.png" /></p>
+<p>The current head of the declaration chain for each name is stored in a global
+hash table that maps declaration names to declaration nodes. Initially this
+hash table is empty and all <code>prev_decl</code> pointers are <code>NULL</code>.</p>
+<p>To handle scoping of names we need two stacks - one stores all declarations
+that are visible (but possibly shadowed by more recent declarations). The other
+stack stores the number of names that were declared in the current scope.
+We need to know the number of local declarations for each scope when unwinding
+the declaration stack.</p>
+<p>The data for name analysis is stored like this:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">State</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">HashTable</span><span class="o">*</span><span class="w"> </span><span class="n">names</span><span class="p">;</span><span class="w"> </span><span class="c1">// Current head of each name chain.</span>
+
+<span class="w">  </span><span class="c1">// Name stack:</span>
+<span class="w">  </span><span class="n">AstNode</span><span class="o">*</span><span class="w"> </span><span class="n">stack</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="n">stack_last</span><span class="p">;</span><span class="w"> </span><span class="c1">// Initially 0.</span>
+
+<span class="w">  </span><span class="c1">// Number of names in each scope:</span>
+<span class="w">  </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">scope</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="n">scope_last</span><span class="p">;</span><span class="w"> </span><span class="c1">// Initially 0.</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<p>In reality the stacks use their own data structures that can grow dynamically but I've simplified
+it to fixed-sized arrays here for simplicity.</p>
+<p>When doing name analysis the AST is visited in a pre-order traversal and each
+time a new declaration is encountered we have to update the hash table to point
+to the new head of the corresponding declaration chain.</p>
+<p>The functions below illustrate how the name analysis works. The <code>declare</code>
+function is called once for each declaration node during the AST name analysis
+traversal. The <code>push_scope</code> function is called whenever we enter a new name
+scope and <code>pop_scope</code> is called when leaving the scope.</p>
+<div class="codehilite"><pre><span></span><code><span class="cm">/** Get the name of a declaration. */</span>
+<span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="nf">ast_decl_name</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">AstNode</span><span class="o">*</span><span class="w"> </span><span class="n">decl</span><span class="p">);</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">declare</span><span class="p">(</span><span class="n">State</span><span class="w"> </span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="n">AstNode</span><span class="o">*</span><span class="w"> </span><span class="n">decl</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ast_decl_name</span><span class="p">(</span><span class="n">decl</span><span class="p">);</span>
+<span class="w">  </span><span class="n">decl</span><span class="o">-&gt;</span><span class="n">prev_decl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tbl_lookup</span><span class="p">(</span><span class="n">s</span><span class="p">.</span><span class="n">names</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">);</span>
+<span class="w">  </span><span class="n">tbl_insert</span><span class="p">(</span><span class="n">s</span><span class="p">.</span><span class="n">names</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">decl</span><span class="p">);</span>
+<span class="w">  </span><span class="n">s</span><span class="p">.</span><span class="n">stack</span><span class="p">[</span><span class="n">s</span><span class="p">.</span><span class="n">stack_last</span><span class="o">++</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">decl</span><span class="p">;</span>
+<span class="w">  </span><span class="n">s</span><span class="p">.</span><span class="n">scope</span><span class="p">[</span><span class="n">s</span><span class="p">.</span><span class="n">scope_last</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">push_scope</span><span class="p">(</span><span class="n">State</span><span class="w"> </span><span class="n">s</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="n">s</span><span class="p">.</span><span class="n">scope</span><span class="p">[</span><span class="o">++</span><span class="n">s</span><span class="p">.</span><span class="n">scope_last</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">pop_scope</span><span class="p">(</span><span class="n">State</span><span class="w"> </span><span class="n">s</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">s</span><span class="p">.</span><span class="n">scope</span><span class="p">[</span><span class="n">s</span><span class="p">.</span><span class="n">scope_last</span><span class="p">];</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">AstNode</span><span class="o">*</span><span class="w"> </span><span class="n">decl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">s</span><span class="p">.</span><span class="n">stack</span><span class="p">[</span><span class="n">s</span><span class="p">.</span><span class="n">stack_last</span><span class="o">--</span><span class="p">];</span>
+<span class="w">    </span><span class="n">tbl_insert</span><span class="p">(</span><span class="n">s</span><span class="p">.</span><span class="n">names</span><span class="p">,</span><span class="w"> </span><span class="n">ast_decl_name</span><span class="p">(</span><span class="n">decl</span><span class="p">),</span><span class="w"> </span><span class="n">decl</span><span class="o">-&gt;</span><span class="n">prev_decl</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="n">s</span><span class="p">.</span><span class="n">scope_last</span><span class="w"> </span><span class="o">-=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>During name analysis each non-declaration use of a name is bound to the
+matching declaration chain by doing <code>tbl_lookup(s.names, name)</code> to get the
+current head of the matching name chain.</p>
+        </main>
+        <footer>Posted on 2023-09-17<br/>Copyright &copy; Jesper Öqvist</footer>
+    </div>
+  </table>
+</body>
+</html>

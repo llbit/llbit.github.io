@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Building a Standalone Clang Tool</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16" type="image/vnd.microsoft.icon">
+<link href="/assets/style.css" rel="stylesheet" type="text/css">
+<link href="/assets/highlight.css" rel="stylesheet" type="text/css">
+
+</head>
+<a name="top"></a>
+<body>
+    <header id="header">
+        <div class="column">
+        <a href="/" id="site-title">Low-Level Bits</a>
+        </div>
+    </header>
+    <div class="column">
+        <main>
+          <h1>Building a Standalone Clang Tool</h1>
+<!-- date={2023-12-01} -->
+
+<p>I wrote a small Clang-based tool to analyze C code to find potentially
+problematic assign-through pointer expressions.
+The assignments I want to find look like this: <code>PTR(x)-&gt;y = z</code> where
+<code>PTR</code> is a macro that dereferences some pointer expression <code>x</code>.
+As the order in which the left- and right-hand sides
+of an assignment are evaluated in C is undefined this could lead to memory
+errors if the <code>z</code> expression contains side effects that affect pointer derferenced in
+the left-hand side.</p>
+<p>The code I'm analyzing is a lare C project project that uses its own garbage
+collector (GC) where <code>PTR</code> is a macro for dereferencing a GC object.  There
+were some bugs caused in our test suite by through-pointer assignments like the
+above one when when running the tests on an ARM-based platform (the bug did not
+occur in the normal x86-based test environment).</p>
+<h2>Clang AstMatcher API</h2>
+<p>Finding these kinds of expressions with Clang is pretty easy. Clang has an API
+for AST matching that <a href="AstMatcher Tutorial">allows us to write matchers such as this:</a></p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span><span class="w"> </span><span class="n">AssignMatcher</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">binaryOperator</span><span class="p">(</span>
+<span class="w">    </span><span class="n">hasOperatorName</span><span class="p">(</span><span class="s">&quot;=&quot;</span><span class="p">),</span>
+<span class="w">    </span><span class="n">hasLHS</span><span class="p">(</span><span class="n">memberExpr</span><span class="p">(</span><span class="n">hasObjectExpression</span><span class="p">(</span><span class="n">stmt</span><span class="p">(</span><span class="n">isExpandedFromMacro</span><span class="p">(</span><span class="s">&quot;PTR&quot;</span><span class="p">))))),</span>
+<span class="w">    </span><span class="n">hasRHS</span><span class="p">(</span><span class="n">findAll</span><span class="p">(</span><span class="n">callExpr</span><span class="p">()))</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div>
+
+<p>This matcher finds all expressions as described above where the right-hand side
+additionally contains a function call.</p>
+<p>Running my tool on each continuous integration build would ensure that we don't
+encounter this particular type of bug again in the project.</p>
+<h2>Building Standalone</h2>
+<p>Although my tool was pretty simple, with less than 100 lines of code, figuring out how to
+build it proved to be more challenging that just writing the tool itself.</p>
+<p>Although it is possible to compile a Clang tool using <a href="LibTooling">LibTooling</a>
+against pre-built LLVM/Clang binaries that are available in Debian, e.g.,
+this is not really covered in the LLVM documentation.</p>
+<p>Most pages in the documentation at <code>llvm.org</code> assume that you've built LLVM
+from source, rather than using pre-built binaries.</p>
+<p>I tried building LLVM from source on my laptop at first but quickly gave up
+when the build soon ran out of memory.  It turns out that you need about 30-40 GB of
+working memory and about 120 GB of free disk space to build the current
+latest version of LLVM (17.0.6).  If you don't have enough RAM you
+have to rely on Swap space.  The source code takes about 2 GB of space if
+downloaded as a shallow Git clone and the build directory of a completed build
+on my machine was 113 GB.</p>
+<p>In the end I did manage to build my tool against the pre-built LLVM-15 Debian
+packages although finding out how to correctly link the code was tricky.  <a href="llvm-config">The
+tool <code>llvm-config</code> can be used to generate compiler flags for compiling/linking
+a standalone tool</a> but I did not know where to find the list of
+LLVM components I needed to link with.</p>
+<p>I tried to link against all 90 <code>libclang*.a</code> files in <code>/usr/lib/llvm-15/lib</code>,
+however, that failed with lots of undefined symbol errors from the linker. This
+seemed strange as using <code>nm</code> turned up matching symbols in those libraries.  It
+turns out that the LLVM libraries have circular dependencies and to solve these
+the linker will have to iteratively resolve names among the libraries.</p>
+<p>Normally the linker only does one pass over the listed libraries which then
+fails on the first undefined symbol. To handle circular references
+one can use the <code>-Wl,--start-group</code> and <code>-Wl,--end-group</code> flags surrounding the
+list of libraries that contain circular references
+This solved the linking problems so I was finally able to
+link my tool. I narrowed down the list of libraries a bit and ended up with the
+following magical incantation:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">g</span><span class="o">++</span><span class="w"> </span><span class="o">-</span><span class="n">g</span><span class="w"> </span><span class="err">`</span><span class="n">llvm</span><span class="o">-</span><span class="n">config</span><span class="o">-</span><span class="mi">15</span><span class="w"> </span><span class="o">--</span><span class="n">cxxflags</span><span class="err">`</span><span class="w"> </span><span class="o">-</span><span class="n">o</span><span class="w"> </span><span class="k">tool</span><span class="o">.</span><span class="n">o</span><span class="w"> </span><span class="o">-</span><span class="n">c</span><span class="w"> </span><span class="k">tool</span><span class="o">.</span><span class="n">cc</span>
+<span class="n">g</span><span class="o">++</span><span class="w"> </span><span class="o">-</span><span class="n">g</span><span class="w"> </span><span class="err">`</span><span class="n">llvm</span><span class="o">-</span><span class="n">config</span><span class="o">-</span><span class="mi">15</span><span class="w"> </span><span class="o">--</span><span class="n">ldflags</span><span class="err">`</span><span class="w"> </span><span class="o">-</span><span class="n">o</span><span class="w"> </span><span class="k">tool</span><span class="w"> </span><span class="k">tool</span><span class="o">.</span><span class="n">o</span><span class="w"> </span>\
+<span class="w">    </span><span class="o">-</span><span class="n">Wl</span><span class="p">,</span><span class="o">--</span><span class="n">start</span><span class="o">-</span><span class="n">group</span><span class="w"> </span>\
+<span class="w">    </span><span class="o">-</span><span class="n">lclang</span><span class="w"> </span><span class="o">-</span><span class="n">lclangSupport</span><span class="w"> </span><span class="o">-</span><span class="n">lclangAST</span><span class="w"> </span><span class="o">-</span><span class="n">lclangASTMatchers</span><span class="w"> </span>\
+<span class="w">    </span><span class="o">-</span><span class="n">lclangFrontend</span><span class="w"> </span><span class="o">-</span><span class="n">lclangDriver</span><span class="w"> </span><span class="o">-</span><span class="n">lclangParse</span><span class="w"> </span><span class="o">-</span><span class="n">lclangSerialization</span><span class="w"> </span>\
+<span class="w">    </span><span class="o">-</span><span class="n">lclangSema</span><span class="w"> </span><span class="o">-</span><span class="n">lclangAnalysis</span><span class="w"> </span><span class="o">-</span><span class="n">lclangEdit</span><span class="w"> </span><span class="o">-</span><span class="n">lclangAST</span><span class="w"> </span><span class="o">-</span><span class="n">lclangLex</span><span class="w"> </span><span class="o">-</span><span class="n">lclangBasic</span><span class="w"> </span>\
+<span class="w">    </span><span class="o">-</span><span class="n">lclangTooling</span><span class="w"> </span><span class="o">-</span><span class="n">lclangToolingCore</span><span class="w"> </span><span class="o">-</span><span class="n">lclangToolingSyntax</span><span class="w"> </span><span class="o">-</span><span class="n">lclangToolingASTDiff</span><span class="w"> </span>\
+<span class="w">    </span><span class="o">-</span><span class="n">lclangRewrite</span><span class="w"> </span>\
+<span class="w">    </span><span class="o">-</span><span class="n">Wl</span><span class="p">,</span><span class="o">--</span><span class="n">end</span><span class="o">-</span><span class="n">group</span><span class="w"> </span>\
+<span class="w">    </span><span class="err">`</span><span class="n">llvm</span><span class="o">-</span><span class="n">config</span><span class="o">-</span><span class="mi">15</span><span class="w"> </span><span class="o">--</span><span class="n">libs</span><span class="w"> </span><span class="n">engine</span><span class="err">`</span>
+</code></pre></div>
+
+<h2>Outdated Documentation</h2>
+<p>The <a href="LibTooling">LibTooling</a> page contains an outdated example code snippet:</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">argc</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">**</span><span class="n">argv</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">CommonOptionsParser</span><span class="w"> </span><span class="n">OptionsParser</span><span class="p">(</span><span class="n">argc</span><span class="p">,</span><span class="w"> </span><span class="n">argv</span><span class="p">,</span><span class="w"> </span><span class="n">MyToolCategory</span><span class="p">);</span>
+<span class="w">  </span><span class="n">ClangTool</span><span class="w"> </span><span class="n">Tool</span><span class="p">(</span><span class="n">OptionsParser</span><span class="p">.</span><span class="n">getCompilations</span><span class="p">(),</span>
+<span class="w">                 </span><span class="n">OptionsParser</span><span class="p">.</span><span class="n">getSourcePathList</span><span class="p">());</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">Tool</span><span class="p">.</span><span class="n">run</span><span class="p">(</span><span class="n">newFrontendActionFactory</span><span class="o">&lt;</span><span class="n">clang</span><span class="o">::</span><span class="n">SyntaxOnlyAction</span><span class="o">&gt;</span><span class="p">().</span><span class="n">get</span><span class="p">());</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>The <code>CommonOptionsParser</code> class should not be instantiated directly. It has
+been made protected in some previous version of LLVM.  Instead the builder
+function <code>::create</code> should be called:</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">argc</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">**</span><span class="n">argv</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">Options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CommonOptionsParser</span><span class="o">::</span><span class="n">create</span><span class="p">(</span><span class="n">argc</span><span class="p">,</span><span class="w"> </span><span class="n">argv</span><span class="p">,</span><span class="w"> </span><span class="n">PtrAssCategory</span><span class="p">);</span>
+<span class="w">  </span><span class="n">ClangTool</span><span class="w"> </span><span class="n">Tool</span><span class="p">(</span><span class="n">Options</span><span class="o">-&gt;</span><span class="n">getCompilations</span><span class="p">(),</span><span class="w"> </span><span class="n">Options</span><span class="o">-&gt;</span><span class="n">getSourcePathList</span><span class="p">());</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2>Putting it all Together</h2>
+<p>Here is the full code of an initial version of my tool.  The code compiles
+against LLVM 15.0.7 and may not work with other versions.</p>
+<p>I've made some improvements to the tool which are not included but it should
+work as a starting point if you are looking to make a similar Clang tool.</p>
+<div class="codehilite"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;clang/ASTMatchers/ASTMatchFinder.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;clang/ASTMatchers/ASTMatchers.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;clang/Frontend/FrontendActions.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;clang/Frontend/FrontendPluginRegistry.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;clang/Frontend/TextDiagnostic.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;clang/Frontend/TextDiagnosticPrinter.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;clang/Frontend/CompilerInstance.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;clang/Rewrite/Core/Rewriter.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;clang/Tooling/CommonOptionsParser.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;clang/Tooling/Tooling.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;llvm/Support/CommandLine.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;llvm/Support/Signals.h&quot;</span>
+
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">clang</span><span class="p">;</span>
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">clang</span><span class="o">::</span><span class="nn">ast_matchers</span><span class="p">;</span>
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">clang</span><span class="o">::</span><span class="nn">Builtin</span><span class="p">;</span>
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">clang</span><span class="o">::</span><span class="nn">tooling</span><span class="p">;</span>
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">llvm</span><span class="p">;</span>
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">llvm</span><span class="o">::</span><span class="nn">cl</span><span class="p">;</span>
+
+<span class="k">auto</span><span class="w"> </span><span class="n">AssignMatcher</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">binaryOperator</span><span class="p">(</span>
+<span class="w">    </span><span class="n">hasOperatorName</span><span class="p">(</span><span class="s">&quot;=&quot;</span><span class="p">),</span>
+<span class="w">    </span><span class="n">hasLHS</span><span class="p">(</span><span class="n">memberExpr</span><span class="p">(</span><span class="n">hasObjectExpression</span><span class="p">(</span><span class="n">stmt</span><span class="p">(</span><span class="n">isExpandedFromMacro</span><span class="p">(</span><span class="s">&quot;PTR&quot;</span><span class="p">))))),</span>
+<span class="w">    </span><span class="n">hasRHS</span><span class="p">(</span><span class="n">findAll</span><span class="p">(</span><span class="n">callExpr</span><span class="p">()))</span>
+<span class="w">  </span><span class="p">).</span><span class="n">bind</span><span class="p">(</span><span class="s">&quot;assign&quot;</span><span class="p">);</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">AssignPrinter</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">MatchFinder</span><span class="o">::</span><span class="n">MatchCallback</span><span class="w"> </span><span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+<span class="w">  </span><span class="k">virtual</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">run</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">MatchFinder</span><span class="o">::</span><span class="n">MatchResult</span><span class="o">&amp;</span><span class="w"> </span><span class="n">Result</span><span class="p">)</span><span class="w"> </span><span class="k">final</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">BinaryOperator</span><span class="o">*</span><span class="w"> </span><span class="n">Node</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Result</span><span class="p">.</span><span class="n">Nodes</span><span class="p">.</span><span class="n">getNodeAs</span><span class="o">&lt;</span><span class="n">BinaryOperator</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;assign&quot;</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">DiagnosticsEngine</span><span class="o">&amp;</span><span class="w"> </span><span class="n">DE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Result</span><span class="p">.</span><span class="n">Context</span><span class="o">-&gt;</span><span class="n">getDiagnostics</span><span class="p">();</span>
+<span class="w">      </span><span class="k">auto</span><span class="w"> </span><span class="n">ID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">DE</span><span class="p">.</span><span class="n">getCustomDiagID</span><span class="p">(</span><span class="n">DiagnosticsEngine</span><span class="o">::</span><span class="n">Error</span><span class="p">,</span>
+<span class="w">          </span><span class="s">&quot;Possibly unsafe assign-through pointer operation. Side-effects in RHS may move object dereferenced in LHS.&quot;</span><span class="p">);</span>
+<span class="w">      </span><span class="k">auto</span><span class="w"> </span><span class="n">DB</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">DE</span><span class="p">.</span><span class="n">Report</span><span class="p">(</span><span class="n">Node</span><span class="o">-&gt;</span><span class="n">getExprLoc</span><span class="p">(),</span><span class="w"> </span><span class="n">ID</span><span class="p">);</span>
+<span class="w">      </span><span class="n">DB</span><span class="p">.</span><span class="n">AddSourceRange</span><span class="p">(</span><span class="n">CharSourceRange</span><span class="o">::</span><span class="n">getTokenRange</span><span class="p">(</span><span class="n">Node</span><span class="o">-&gt;</span><span class="n">getSourceRange</span><span class="p">()));</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">};</span>
+
+<span class="k">static</span><span class="w"> </span><span class="n">OptionCategory</span><span class="w"> </span><span class="n">PtrAssCategory</span><span class="p">(</span><span class="s">&quot;ptr-ass options&quot;</span><span class="p">);</span>
+<span class="k">static</span><span class="w"> </span><span class="n">extrahelp</span><span class="w"> </span><span class="nf">CommonHelp</span><span class="p">(</span><span class="n">CommonOptionsParser</span><span class="o">::</span><span class="n">HelpMessage</span><span class="p">);</span>
+<span class="k">static</span><span class="w"> </span><span class="n">extrahelp</span><span class="w"> </span><span class="n">MoreHelp</span><span class="p">(</span><span class="s">&quot;ptr-ass finds potentially problematic assign-through pointer expressions</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">argc</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">**</span><span class="n">argv</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">Options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CommonOptionsParser</span><span class="o">::</span><span class="n">create</span><span class="p">(</span><span class="n">argc</span><span class="p">,</span><span class="w"> </span><span class="n">argv</span><span class="p">,</span><span class="w"> </span><span class="n">PtrAssCategory</span><span class="p">);</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">Options</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">llvm</span><span class="o">::</span><span class="n">errs</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;No source files specified.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">-1</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="n">ClangTool</span><span class="w"> </span><span class="n">Tool</span><span class="p">(</span><span class="n">Options</span><span class="o">-&gt;</span><span class="n">getCompilations</span><span class="p">(),</span><span class="w"> </span><span class="n">Options</span><span class="o">-&gt;</span><span class="n">getSourcePathList</span><span class="p">());</span>
+
+<span class="w">  </span><span class="n">AssignPrinter</span><span class="w"> </span><span class="n">Printer</span><span class="p">;</span>
+<span class="w">  </span><span class="n">MatchFinder</span><span class="w"> </span><span class="n">Finder</span><span class="p">;</span>
+<span class="w">  </span><span class="n">Finder</span><span class="p">.</span><span class="n">addMatcher</span><span class="p">(</span><span class="n">AssignMatcher</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">Printer</span><span class="p">);</span>
+
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">Tool</span><span class="p">.</span><span class="n">run</span><span class="p">(</span><span class="n">newFrontendActionFactory</span><span class="p">(</span><span class="o">&amp;</span><span class="n">Finder</span><span class="p">).</span><span class="n">get</span><span class="p">());</span>
+<span class="p">}</span>
+</code></pre></div>
+        </main>
+        <footer>Posted on 2023-12-01<br/>Copyright &copy; Jesper Öqvist</footer>
+    </div>
+  </table>
+</body>
+</html>

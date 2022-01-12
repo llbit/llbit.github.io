@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Git Metrics Tool</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16" type="image/vnd.microsoft.icon">
+<link href="/assets/style.css" rel="stylesheet" type="text/css">
+<link href="/assets/highlight.css" rel="stylesheet" type="text/css">
+
+</head>
+<a name="top"></a>
+<body>
+    <header id="header">
+        <div class="column">
+        <a href="/" id="site-title">Low-Level Bits</a>
+        </div>
+    </header>
+    <div class="column">
+        <main>
+          <h1>Git Metrics Tool</h1>
+<!-- date={2018-12-19} -->
+
+<p>I wrote a small Python program to extract Git commit metrics for a table in my thesis. There
+were some alternative tools available, but none of them gave exactly the output I was looking for.
+Instead of converting the output from another tool it seemed easy enough to roll my own solution,
+so here it is: <a href="https://github.com/llbit/git-commit-metrics">git-commit-metrics</a>.</p>
+<p>My program generates TeX tables like the following one:</p>
+<p><img alt="Number of commits and lines changed per author for a git repository." src="/assets/extendj-statistics.png" /></p>
+<p>The above table was generated for the <a href="https://bitbucket.org/extendj/extendj/src">ExtendJ compiler repository</a>.</p>
+        </main>
+        <footer>Posted on 2018-12-19<br/>Copyright &copy; Jesper Öqvist</footer>
+    </div>
+  </table>
+</body>
+</html>

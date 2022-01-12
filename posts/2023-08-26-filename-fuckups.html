@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Filename Fuck-ups</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16" type="image/vnd.microsoft.icon">
+<link href="/assets/style.css" rel="stylesheet" type="text/css">
+<link href="/assets/highlight.css" rel="stylesheet" type="text/css">
+
+</head>
+<a name="top"></a>
+<body>
+    <header id="header">
+        <div class="column">
+        <a href="/" id="site-title">Low-Level Bits</a>
+        </div>
+    </header>
+    <div class="column">
+        <main>
+          <h1>Filename Fuck-ups</h1>
+<!-- date={2023-08-26} -->
+
+<p>I recently made a git branch with the slightly creative branch name
+<code>((x.y).z).w</code> and pushed it to my team's GitLab server.  Normally the branches
+on the server are named with only underscore or dash to separate parts of the
+branch name, e.g., <code>refactor-compiler</code>.  I was testing how creative I could be
+with branch names and found out that <code>&gt;</code> was allowed.  So I also made a branch
+named <code>globals-&gt;initfunctions</code> and pushed that one too.  This soon lead to all
+our GitLab continuous integration builds failing on Windows for all branches.</p>
+<p>The failing Windows builds had the following in their logs:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">Fetching</span><span class="w"> </span><span class="n">changes</span><span class="p">...</span>
+<span class="n">Initialized</span><span class="w"> </span><span class="n">empty</span><span class="w"> </span><span class="n">Git</span><span class="w"> </span><span class="n">repository</span><span class="w"> </span><span class="kr">in</span><span class="w"> </span><span class="n">C</span><span class="o">:/</span><span class="n">GitLab</span><span class="o">-</span><span class="n">Runner</span><span class="o">/</span><span class="n">builds</span><span class="o">/</span><span class="n">SZUExwvh</span><span class="o">/</span><span class="mi">0</span><span class="o">/</span><span class="n">nextgen</span><span class="o">/</span><span class="n">language</span><span class="o">/</span><span class="p">.</span><span class="n">git</span><span class="o">/</span>
+<span class="n">Created</span><span class="w"> </span><span class="n">fresh</span><span class="w"> </span><span class="n">repository</span><span class="p">.</span>
+<span class="nf">error</span><span class="o">:</span><span class="w"> </span><span class="n">cannot</span><span class="w"> </span><span class="n">lock</span><span class="w"> </span><span class="n">ref</span><span class="w"> </span><span class="s">&#39;refs/remotes/origin/global-&gt;initfunctions&#39;</span><span class="o">:</span><span class="w"> </span><span class="n">Unable</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">create</span><span class="w"> </span><span class="s">&#39;C:/GitLab-Runner/builds/SZUExwvh/0/nextgen/language/.git/refs/remotes/origin/global-&gt;initfunctions.lock&#39;</span><span class="o">:</span><span class="w"> </span><span class="n">Invalid</span><span class="w"> </span><span class="n">argument</span>
+</code></pre></div>
+
+<p>Even if a build job was not trying to check out the <code>global-&gt;initfunctions</code>
+branch, it still apparently needed to create a <code>.lock</code> file for the branch in the git
+checkout, but this failed because <code>&gt;</code> cannot be part of a filename on Windows.</p>
+<p>This git problem reminded me of one time when a student in a course I was TA in
+had a problem building a lab project on his laptop.  The lab project was built
+using Gradle and it had worked seamlessly for hundreds of students before then,
+but this student got seemingly unexplainable Java compilation errors in his
+unmodified base version of the lab project.</p>
+<p>It turned out that the problem was that his project resided in a
+directory that contained a colon in its name.  The <code>:</code> character is used for
+separating entries on the Java classpath so when Gradle tried to build his
+project it had some extra <code>:</code> in the classpath that referenced Jar files inside his
+project folder and the build then failed because the paths got split up
+incorrectly.</p>
+        </main>
+        <footer>Posted on 2023-08-26<br/>Copyright &copy; Jesper Öqvist</footer>
+    </div>
+  </table>
+</body>
+</html>

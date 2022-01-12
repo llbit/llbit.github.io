@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Introduction to SSAPRE</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16" type="image/vnd.microsoft.icon">
+<link href="/assets/style.css" rel="stylesheet" type="text/css">
+<link href="/assets/highlight.css" rel="stylesheet" type="text/css">
+
+</head>
+<a name="top"></a>
+<body>
+    <header id="header">
+        <div class="column">
+        <a href="/" id="site-title">Low-Level Bits</a>
+        </div>
+    </header>
+    <div class="column">
+        <main>
+          <h1>Introduction to SSAPRE</h1>
+<!-- date={2009-12-26} -->
+<!-- categories: programming, compilers -->
+
+<p>I took a course on optimizing compilers this autumn. The course included a
+project in which the students, together in groups of two, implemented some of the optimizations that were
+covered during the course.</p>
+<p>The optimizations were implemented in a simple subset-of-C compiler, and
+as an optional challenge it was encouraged to implement additional optimizations in order to
+minimize the number of clock cycles for a certain benchmark program to be optimized by our compilers.</p>
+<p>My project partner and I implemented the minimum required optimizations and then became obsessed with
+implementing more and more to achieve better scores on the benchmark. After we had completed several
+of the simpler optimizations I set my sight on something much more difficult and
+implemented the optimization described in <a href="http://doi.acm.org/10.1145/319301.319348"><em>Partial Redundancy
+Elimination in SSA Form</em> by Robert Kennedy et al. in TOPLAS, May
+1999</a>. In this blog post I will attempt to describe what
+this optimization does, and how it works.</p>
+<!--more-->
+<h2>Partial Redundancy Elimination</h2>
+<p><em>Partial Redundancy Elimination</em> is a compiler optimization which aims to remove redundant
+computations in a program. A program with (partial) redundancies may look like this:</p>
+<h3>Example 1</h3>
+<div class="codehilite"><pre><span></span><code><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">a</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="o">+</span><span class="n">b</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="o">+</span><span class="n">b</span><span class="p">;</span>
+</code></pre></div>
+
+<p>In this example the expression <code>a+b</code> is partially redundant: if execution enters the then-clause of
+the if-statement, the expression will be evaluated twice.  This redundancy can be eliminated by
+introducing a new instance of the same expression and storing the result in a temporary:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">a</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="o">+</span><span class="n">b</span><span class="p">;</span>
+<span class="w">    </span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">c</span><span class="p">;</span>
+<span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="o">+</span><span class="n">b</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">t</span><span class="p">;</span>
+</code></pre></div>
+
+<p>Now the expression <code>a+b</code> is only evaluated once, regardless of which execution path the program
+takes.</p>
+<p>SSAPRE is an algorithm for redundancy elimination on programs in Single Static Assignment (SSA)
+form (note: without critical edges). The output of SSAPRE is another program on SSA form where
+redundant expressions from the previous program have been replaced by temporaries on SSA form.</p>
+<h2>The SSAPRE Algorithm</h2>
+<p>Kennedy et al. present two different versions of SSAPRE. One less efficient but perhaps simpler
+version and another more efficient version. Personally, I thought the simpler version caused more
+special cases than the efficient version. I did implement the simpler version first, but I consider
+that to have been a waste of time since it was much easier to optimize full nested expressions with
+the more efficient version, and it took less time for me to implement.</p>
+<p><em>I will be very brief in the description of SSAPRE here, so if you need more information I can only
+suggest that you read the original paper by Kennedy et al. Also, I apologize for any errors I may
+have made here.</em></p>
+<h3>Terminology</h3>
+<p>Each expression in the original program, such as <code>a+b</code> in the above example, is called a real
+occurrence of some computation. Two occurrences belong to the same computation if they have the
+same operands and the same operator.</p>
+<p>Besides real occurrences there exist Φ occurrences, Φ operand occurrences and exit occurrences.</p>
+<p>Each occurrence also has a redundancy class. The redundancy class is similar to the SSA version of
+variables in SSA form. Two occurrences that occur in places where the expression returns the same
+value <em>may</em> have the same redundancy class, it is possible that they do not but two occurrences
+with equal redundancy class will never return different results.</p>
+<p>Φ occurrences are very similar to φ functions for SSA variables. Φs occur at the beginning of basic
+blocks where different values of an expression meet. The Φ selects a value for the expression based
+on which predecessor control has come from. A Φ can be regarded as representing the latest
+redundancy class of the computation, just as a φ would represent the latest version of an SSA
+variable.</p>
+<p>Φ operand occurrences are at the end of basic blocks which have a successor with a Φ. A Φ operand
+is ⊥ (bottom) if the expression is not evaluated/used after a redefenition of one of its variables
+(before the Φ which the Φ operator is an operand of).</p>
+<p>Exit occurrences are really only used to initialize <em>downsafety</em>. More on that later.</p>
+<h3>Φ insertion</h3>
+<p>The first step of SSAPRE is to insert Φ occurrences. To quote Kennedy et al.</p>
+<blockquote>
+<p>A Φ for an expression is needed whenever different values of the same expression reach a common point in the program.</p>
+</blockquote>
+<p>This is very similar to φ insertion in regular SSA transformation, and it can be implemented
+similarly. A Φ must be inserted in each basic block on the iterated dominance frontier of the real
+occurrences of a computation, and the iterated dominance frontier of each of its operands'
+(re)definitions.</p>
+<h3>Occurrence Renaming</h3>
+<p>The redundancy class for occurrences is assigned in a step called <em>Rename</em>, which again is very
+similar to the SSA renaming algorithm.</p>
+<p><em>Rename</em> walks over a list of occurrences in dominator tree pre-order. For each real occurrence it
+encounters, it assigns the latest redundancy class. For each Φ it assigns the next redundancy
+class, and for each Φ operand it assigns either the latest redundancy class or ⊥. There are some
+important special cases here, but otherwise that's the general idea.</p>
+<h3>Inserted Occurrences and Downsafety</h3>
+<p>In some places, as in Example 1, we might want to insert a real occurrence for a computation. This
+can only be done if the Φ which the inserted occurrence would be an operand of is <em>downsafe</em>. A Φ
+is <em>downsafe</em> if each path from the Φ to program exit or a redefinition of one of the operands sees
+a use of the expression. As Kennedy et al. puts it:</p>
+<blockquote>
+<p>A Φ is not down-safe if there is a control flow path from that along which the expression is not
+evaluated before program exit or before being altered by redefinition of one of its variables.</p>
+</blockquote>
+<p>If an evaluation of some expression is inserted and is downsafe, we know that we are not
+introducing expressions into the program which would otherwise not have been evaluated and thus are
+not introducing new redundancy or exceptions.</p>
+<p>If we look at the above example program we can see that in the block right after the if-statement
+there needs to be a Φ for a+b. This Φ must be downsafe since it has a use later in the same basic
+block.</p>
+<p>To compute downsafety we initialize certain nodes as <em>not downsafe</em> then propagate the <em>not
+downsafe</em> property upwards in the Control Flow Graph (CFG).</p>
+<h3>Availability of Occurrences</h3>
+<p>A Φ occurrence has the property <em>'will be available'</em> at some point in the program if the value of
+the expression is needed, the Φ is <em>downsafe</em>, and it can not be evaluated <em>later</em>.</p>
+<p>The availability, more precisely the <em>'will be available'</em> property of an occurrence is computed by
+first calculating <em>'can be available'</em> and <em>'later'</em>. I won't describe how these are calculated
+since it is quite tedious.</p>
+<h3>Finalizing SSAPRE</h3>
+<p>When finalizing SSAPRE each computation receives a temporary variable. This temporary is
+SSA-versioned so that each version of the temporary corresponds to a redundancy class. Occurrences
+are either:</p>
+<ul>
+<li>inserted</li>
+<li>saved</li>
+<li>reloaded</li>
+</ul>
+<p>Φ operands are <em>inserted</em> if they are not available (either ⊥ or defined by Φ which does not
+satisfy <em>can be available</em> and has no real use).</p>
+<p>An occurrence needs to be <em>saved</em> if it is not redundant and can not fetch its value from the
+temporary.</p>
+<p>Occurrences are <em>reloaded</em> when the latest version of the temporary corresponds to the correct
+(i.e. same as the defining occurrence) redundancy class.</p>
+<h2>Practical Considerations</h2>
+<p>SSAPRE uses a worklist of computations to be optimized. The initial pass of SSAPRE collects
+computations from the program (based on real occurrences) and puts these into the worklist. During
+SSAPRE more expressions may become eligible for optimization, if so they are put in the worklist.
+SSAPRE can optimize each computation independently of the others, this means that large parts of
+SSAPRE can be parallelized.</p>
+<h3>Nested Expressions</h3>
+<p>SSAPRE can optimize nested expression trees efficiently by first optimizing simple expressions and
+then expressions which use those as operands. Depending on the program representation passed to
+SSAPRE this can be done a couple different ways.</p>
+<p>The representation I had to work with in our compiler project was a three address code
+representation. Some of the expressions would only use symbols and/or constants as operands, while
+others had one or more temporaries. These temporaries were marked as sub-expression temporaries.
+When new temporaries were produced through reloaded and saved occurrences, the expressions which
+contained the new temporaries were made eligible for optimization if they had no other
+sub-expression temporary operands.</p>
+<p>If using a worklist of computations, it is quite easy to enable optimization of nested expressions.</p>
+<h2>A full SSAPRE Example</h2>
+<p>Let's say we want to optimize the following code:</p>
+<h3>Example 2:</h3>
+<div class="codehilite"><pre><span></span><code><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
+<span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="n">d</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">20</span><span class="p">;</span>
+<span class="k">do</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">c</span><span class="w"> </span><span class="o">&amp;</span><span class="n">gt</span><span class="p">;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">put</span><span class="p">(</span><span class="n">c</span><span class="o">*</span><span class="p">(</span><span class="n">a</span><span class="o">+</span><span class="n">b</span><span class="p">));</span>
+<span class="w">        </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="o">+</span><span class="mi">1</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="o">+</span><span class="n">b</span><span class="p">;</span>
+<span class="w">    </span><span class="n">put</span><span class="p">(</span><span class="n">d</span><span class="o">*</span><span class="mi">3</span><span class="p">);</span>
+<span class="p">}</span><span class="w"> </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">c</span><span class="w"> </span><span class="o">&amp;</span><span class="n">lt</span><span class="p">;</span><span class="w"> </span><span class="n">d</span><span class="p">);</span>
+</code></pre></div>
+
+<p>This code can be represented by the following CFG:</p>
+<p><img alt="SSAPRE01" src="/assets/ssapre01.png" /></p>
+<p>The first task is collecting occurrences. I've named the occurrences according to the scheme where
+the digit is the occurrence id. Temporaries have the letter <code>t</code>. The expression <code>c*t1</code> is not
+eligible for optimization since one of its operands is a sub-expression temporary.</p>
+<p><img alt="SSAPRE02" src="/assets/ssapre02.png" /></p>
+<p>Now we insert Φ occurrences at the iterated dominance frontiers of each real occurrence and each
+(re)definition of an operand of any computation. The operands are not known at this point:</p>
+<p><img alt="SSAPRE03" src="/assets/ssapre03.png" /></p>
+<p>During the Rename step redundancy classes are assigned. Redundancy classes are indicated as the
+last digit in the occurrence names (<code>e1_3</code> has redundancy class 3). We can now decide which Φ
+operands are ⊥ or where they are defined. The dotted arrows in this graph show where the Φ operands
+for computation <code>e2</code> are defined. A Φ operand is ⊥ here only if there is a redefinition of one
+operand without subsequent re-evaluation of the expression. As we can see the second Φ for e2 gets
+its first operand from <code>e2_0</code> since there is no redefinition in the else-clause of the if-statement.
+The second operand is ⊥ since there is a redefinition of the operand a in the then-clause of the
+if-statement but no subsequent use of the expression.</p>
+<p><img alt="SSAPRE04" src="/assets/ssapre04.png" /></p>
+<p>While computing downsafety we find that all occurrences except one are downsafe. The single <em>not
+downsafe</em> occurrence is the Φ for e4. This is not downsafe since it has no use before the
+redefinition of c.</p>
+<p>Only one occurrence satisfies <em>later</em> - the Φ for <code>e1</code>. It satisfies <em>later</em> since both operands are ⊥.</p>
+<p><img alt="SSAPRE05" src="/assets/ssapre05.png" /></p>
+<p>The Φs for e1 and e4 can be discarded since they will not be (made) available.</p>
+<p>Now we need to insert those Φ operands which are ⊥ operands of a Φ which satisfies <em>will be
+available</em>. All the remaining Φs satisfy <em>will be available</em>:</p>
+<p><img alt="SSAPRE06" src="/assets/ssapre06.png" /></p>
+<p>To finalize SSAPRE, we replace each Φ by a φ and insert our new temporaries for each occurrence.</p>
+<p><img alt="SSAPRE07" src="/assets/ssapre07.png" /></p>
+<p>After copy propagation we get a new expression, <code>c*t_e2_1</code>, which is eligible for optimization. It is
+put in the worklist, however it turns out that nothing can be done with it. So, we are done.</p>
+        </main>
+        <footer>Posted on 2009-12-26<br/>Copyright &copy; Jesper Öqvist</footer>
+    </div>
+  </table>
+</body>
+</html>

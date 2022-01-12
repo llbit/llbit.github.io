@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Julia is not LR(1)</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16" type="image/vnd.microsoft.icon">
+<link href="/assets/style.css" rel="stylesheet" type="text/css">
+<link href="/assets/highlight.css" rel="stylesheet" type="text/css">
+
+</head>
+<a name="top"></a>
+<body>
+    <header id="header">
+        <div class="column">
+        <a href="/" id="site-title">Low-Level Bits</a>
+        </div>
+    </header>
+    <div class="column">
+        <main>
+          <h1>Julia is not LR(1)</h1>
+<!-- date={2022-01-27} -->
+
+<p>The <a href="https://julialang.org/">Julia programming language</a> has a very minimalistic grammar, avoiding
+many keywords or syntax elements that are common in other languages such as
+braces and semicolons.  For example, here is a small piece of Julia code:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">function</span><span class="w"> </span><span class="n">hello</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="n">x</span>
+<span class="w">    </span><span class="n">print</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="w">  </span><span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div>
+
+<p>At a glance, Julia code looks similar to <a href="https://www.python.org/">Python</a>. The most notable differences
+are that that Julia requires <code>end</code> after each block of code and does not have
+colons after the function header or if-statement condition. Although properly indented
+code will look very similar to Python code, the Julia parser does not care about indentation.</p>
+<p>Semicolons and braces are used in many programming languages to resolve
+otherwise ambiguous syntax.  For example, if semicolons are optional after
+statements, an expression like <code>x = f(a) + 1</code>
+could be parsed as either one statement <code>x = (f(a) + 1)</code> or two statements
+<code>x = f; (a) + 1</code>. To make expressions like these unambiguous, the Julia language is
+whitespace-sensitive and has some disambiguation rules that depend on the whitespace.
+For example, a function call cannot have whitespace between the function name
+and the parameter list.</p>
+<p>I recently attempted to write an LR(1) grammar for the Julia language, to see
+if it would be possible.  It turned out to not be possible due to the
+whitespace sensitivity in Julia. Here is a small essential subset of my Julia
+grammar which is unambiguous and context-free but not LR(1):</p>
+<div class="codehilite"><pre><span></span><code>program = es
+es = e | es w e
+e  = n | n w EQ e
+n = ID
+w = WHITESPACE
+</code></pre></div>
+
+<p>The <code>es</code> production represents an expression list, which is separated by
+whitespace(s).  An expression <code>e</code> can either be a name <code>n</code> or an
+assignment <code>n w EQ e</code>.  There can be whitespace <code>w</code> preceding
+the assignment operator <code>EQ</code>.  There can also be whitespace after <code>EQ</code>
+but I omit it here for simplicity's sake.  This grammar is
+not LR(1) because when the parser encounters an <code>ID</code> token with a <code>WHITESPACE</code> token
+in the lookahead it can either reduce the <code>ID</code> to an expression or shift it
+to build an assignment later. Since an LR(1) parser must decide which action to take
+based only on the <code>WHITESPACE</code> in the lookahead, it cannot unambiguously choose the
+correct action as always choosing to shift or reduce will make some Julia expressions
+parse incorrectly.</p>
+<p>The LR(1) ambiguities in Julia prevent the use of an LR(1) or LALR(1) parser generator.
+However, I have used a <a href="https://en.wikipedia.org/wiki/GLR_parser">GLR parser generator</a> with my Julia
+grammar and this seems to work so far. Unfortunately it is very
+hard to know if the grammar is ambiguous when using GLR, you pretty much just
+have to parse a bunch of programs and test for multiple valid parse trees. I
+have successively refined my grammar after finding such ambiguities to arrive
+at a grammar that appears unambiguous with my current test set.  Another way
+of determining if the grammar is unambiguous is to carefully look at all the
+LR(1) conflicts in the grammar and convincing yourself that they will be
+resolved by a GLR parse. This seems infeasible for my grammar as there are
+currently 51 shift/reduce conflicts and 34 reduce/reduce conflicts.</p>
+        </main>
+        <footer>Posted on 2022-01-27<br/>Copyright &copy; Jesper Öqvist</footer>
+    </div>
+  </table>
+</body>
+</html>

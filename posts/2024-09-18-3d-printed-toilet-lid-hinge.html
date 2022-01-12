@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fixing my Toilet with 3D Printing</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16" type="image/vnd.microsoft.icon">
+<link href="/assets/style.css" rel="stylesheet" type="text/css">
+<link href="/assets/highlight.css" rel="stylesheet" type="text/css">
+
+</head>
+<a name="top"></a>
+<body>
+    <header id="header">
+        <div class="column">
+        <a href="/" id="site-title">Low-Level Bits</a>
+        </div>
+    </header>
+    <div class="column">
+        <main>
+          <h1>Fixing my Toilet with 3D Printing</h1>
+<!-- date={2024-09-22} -->
+
+<p>A small plastic pin inside the hinge on the seat of my toilet broke. I figured I could print a replacement part with my 3D printer,
+so I measured the original part and modeled it in FreeCAD. The first iteration looked like this:</p>
+<p><img alt="Design version 1 in FreeCAD" src="/assets/hinge1.jpg" /></p>
+<p>This design closely matched the original part and was functional but it had some issues. First of all, it's not very
+nice to 3D print. If you are familiar with 3D printing you probably already spotted the issue: being a long part with no good surface to lie flat on thus requiring support material.</p>
+<p><img alt="Version 1 sliced" src="/assets/hinge1slice.jpg" /></p>
+<p>The bigger issue with the design however are those thin teeth at the end. Those teeth are intended to flex when inserting the pin in the hinge, but they are too thin and the plastic
+I printed the part in was too brittle so after a couple weeks the teeth broke off and the hinge fell apart again.
+So I went back to the drawing table and realized I had to make those teeth more robust. This is what I came up with:</p>
+<p><img alt="Design version 2 in FreeCAD" src="/assets/hinge2.jpg" />
+<img alt="Version 2 sliced" src="/assets/hinge2slice.jpg" /></p>
+<p>Now the teeth are much stronger but still allow flexing so that the pin can be inserted into the hinge. This second design worked great. To improve the printing of the part I also made
+a flat surface along the length of the part. This might make the part marginally more bendy but it certainly improved the print quality. Here are the new parts installed in the hinges:</p>
+<p><img alt="Version 2 sliced" src="/assets/hinge2toilet.jpg" /></p>
+        </main>
+        <footer>Posted on 2024-09-22<br/>Copyright &copy; Jesper Öqvist</footer>
+    </div>
+  </table>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Linux ASLR update crashes AddressSanitizer</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16" type="image/vnd.microsoft.icon">
+<link href="/assets/style.css" rel="stylesheet" type="text/css">
+<link href="/assets/highlight.css" rel="stylesheet" type="text/css">
+
+</head>
+<a name="top"></a>
+<body>
+    <header id="header">
+        <div class="column">
+        <a href="/" id="site-title">Low-Level Bits</a>
+        </div>
+    </header>
+    <div class="column">
+        <main>
+          <h1>Linux ASLR update crashes AddressSanitizer</h1>
+<!-- date={2024-03-19} -->
+
+<p>I had some C code randomly start crashing on my Ubuntu laptop yesterday.
+The code was previously working fine but it started crashing with AddressSanitizer
+infinitely printing <code>AddressSanitizer:DEADLYSIGNAL</code> in the console.</p>
+<p>The first thing I did was to try to narrow down the cause within my own code,
+so I stripped out parts of it to find the faulty code.
+This process was slightly complicated by the fact that the program
+was not reliably crashing - often it would run just fine but about 1/4 or
+1/5 of the times it was started it crashed immediately.</p>
+<p>I had soon removed all of the code in the program and ended up with just an
+empty <code>main</code> function.  In fact at this point I could reliably reproduce the
+error by running this one-liner in the terminal:</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;int main() {}&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>gcc<span class="w"> </span>-fsanitize<span class="o">=</span>address<span class="w"> </span>-xc<span class="w"> </span>-<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="k">for</span><span class="w"> </span>i<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="o">{</span><span class="m">1</span>..100<span class="o">}</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span>./a.out<span class="p">;</span><span class="w"> </span><span class="k">done</span>
+</code></pre></div>
+
+<p>The for-loop made the crash reliably appear at least once every time the command was
+run.</p>
+<p>At this point I started to suspect a package update on my system was at fault.
+Long story short, it turns out that a change to the address-space layout
+randomization (ASLR) in the Ubuntu-packaged Linux kernel version 6.5.0-25
+caused the issue. As far as I can tell kernel versions before that build used 28 random bits
+on 64-bit systems and the change upped it to the maximum possible which was 32.</p>
+<p>The exact change is documented in the <a href="https://launchpad.net/ubuntu/+source/linux/6.5.0-25.25">changelog for Ubuntu package linux
+6.5.0-25.25</a></p>
+<div class="codehilite"><pre><span></span><code><span class="w">  </span><span class="o">*</span><span class="w"> </span><span class="n">test_021_aslr_dapper_libs</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">ubuntu_qrt_kernel_security</span><span class="w"> </span><span class="n">failed</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">K</span><span class="o">-</span><span class="mf">5.19</span><span class="w"> </span><span class="o">/</span>
+<span class="w">    </span><span class="n">J</span><span class="o">-</span><span class="n">OEM</span><span class="o">-</span><span class="mf">6.1</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">J</span><span class="o">-</span><span class="mf">6.2</span><span class="w"> </span><span class="n">AMD64</span><span class="w"> </span><span class="p">(</span><span class="nl">LP</span><span class="p">:</span><span class="w"> </span><span class="n">#1983357</span><span class="p">)</span>
+<span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="o">[</span><span class="n">Config</span><span class="o">]</span><span class="err">:</span><span class="w"> </span><span class="k">set</span><span class="w"> </span><span class="n">ARCH_MMAP_RND_</span><span class="err">{</span><span class="n">COMPAT_</span><span class="p">,</span><span class="w"> </span><span class="err">}</span><span class="n">BITS</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">maximum</span>
+</code></pre></div>
+
+<p>The AddressSanitizer library needs to be configured to accommodate for the
+number of ASLR bits used on the system and the Ubuntu LLVM distribution has not
+yet been updated to match the kernel ASLR configuration.</p>
+<p>There are several different issues on various open source issue trackers on the
+net discussing this issue and <a href="https://bugs.launchpad.net/ubuntu/+source/linux/+bug/2056762">a bug has been reported to the main Ubuntu issue
+tracker</a> so it is
+very likely that this will be fixed soon.</p>
+<h2>Workaround</h2>
+<p>At the moment I am using the following workaround to temporarily set the ASLR
+bit count back to 28:</p>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>sysctl<span class="w"> </span>-w<span class="w"> </span>vm.mmap_rnd_bits<span class="o">=</span><span class="m">28</span>
+</code></pre></div>
+
+<p>This change is reset on reboot but I seldom do reboot so I'll live with
+this until the LLVM packages are updated by Ubuntu to adjust for the ASLR
+change in the kernel.</p>
+        </main>
+        <footer>Posted on 2024-03-19<br/>Copyright &copy; Jesper Öqvist</footer>
+    </div>
+  </table>
+</body>
+</html>

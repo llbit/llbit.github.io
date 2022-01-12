@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Useful C Macros</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16" type="image/vnd.microsoft.icon">
+<link href="/assets/style.css" rel="stylesheet" type="text/css">
+<link href="/assets/highlight.css" rel="stylesheet" type="text/css">
+
+</head>
+<a name="top"></a>
+<body>
+    <header id="header">
+        <div class="column">
+        <a href="/" id="site-title">Low-Level Bits</a>
+        </div>
+    </header>
+    <div class="column">
+        <main>
+          <h1>Useful C Macros</h1>
+<!-- date={2025-12-18} -->
+
+<p>I generally try to avoid reaching for macros when I program in C because using them inappropriately
+can lead to unreadable code which does seemingly unpredictable things and is painful to debug
+(e.g., stepping through macros in a debugger).
+That being said, there are some macros that
+can really help make it much nicer to work in C by minimizing a lot of
+tedious boiler-plate style code.
+Here I will show some of my favorite C macros for various tasks
+like iterating over data structures and printing error messages.</p>
+<h2>Circular List Iteration</h2>
+<p>Say that we have a circular linked list structure defined like this:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">List</span><span class="w"> </span><span class="n">List</span><span class="p">;</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">List</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">List</span><span class="o">*</span><span class="w"> </span><span class="n">next</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">data</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<p>Here is a macro to iterate over the elements of such a list:</p>
+<div class="codehilite"><pre><span></span><code><span class="cp">#define FOR_EACH(p, list) for (        \</span>
+<span class="cp">    List* p = NULL, *next__##p = list; \</span>
+<span class="cp">    p != list &amp;&amp; (p = next__##p);      \</span>
+<span class="cp">    p = next__##p = p-&gt;next)</span>
+</code></pre></div>
+
+<p>The macro is used like this, for example:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">FOR_EACH</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="w"> </span><span class="n">my_list</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">process_data</span><span class="p">(</span><span class="n">p</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2>Locking/Unlocking Mutexes</h2>
+<p>This macro helps creating critical sections by taking and holding a lock while the statements inside the block following the macro call are executed:</p>
+<div class="codehilite"><pre><span></span><code><span class="cp">#define WITH_LOCK(lock) for(int xk=1; xk &amp;&amp; !pthread_mutex_lock(&amp;lock); \</span>
+<span class="cp">    (pthread_mutex_unlock(&amp;lock)), xk=0)</span>
+</code></pre></div>
+
+<p>For example:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">pthread_mutex_t</span><span class="w"> </span><span class="n">sched_lock</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">PTHREAD_MUTEX_INITIALIZER</span><span class="p">;</span>
+
+<span class="c1">// ...</span>
+
+<span class="w">  </span><span class="n">WITH_LOCK</span><span class="p">(</span><span class="n">sched_lock</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">vm_Task</span><span class="o">*</span><span class="w"> </span><span class="n">task</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">task_from_ref</span><span class="p">(</span><span class="n">taskref</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">task</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">task</span><span class="o">-&gt;</span><span class="n">state</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">TASK_STATE_FINISHED</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">state</span><span class="p">.</span><span class="n">ffi_result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TASK_BLOCKED</span><span class="p">;</span>
+<span class="w">      </span><span class="n">task_wait_on</span><span class="p">(</span><span class="n">vm_current_task</span><span class="p">(),</span><span class="w"> </span><span class="n">task</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+</code></pre></div>
+
+<p>Note that the macro relies on normal control flow exiting the block, so that the for-loop increment
+statement can unlock the mutex.
+In other words, you cannot use <code>return</code>, <code>break</code>, or <code>continue</code> inside the block.</p>
+<div class="codehilite"><pre><span></span><code><span class="w">  </span><span class="n">WITH_LOCK</span><span class="p">(</span><span class="n">sched_lock</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">break</span><span class="p">;</span><span class="w"> </span><span class="c1">// DANGER! mutex is left locked</span>
+<span class="w">  </span><span class="p">}</span>
+</code></pre></div>
+
+<h2>Error Reporting</h2>
+<p>Since C99 it is possible to use variable argument macros. This can be combined with a helper function to
+include extra information in error messages. Below is a simplified example of how this might be used,
+adding the function name in the error message.</p>
+<div class="codehilite"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdarg.h&gt;</span>
+
+<span class="cp">#define FFI_ERROR(...) ffi_error(__func__, __VA_ARGS__)</span>
+
+<span class="n">__attribute__</span><span class="p">((</span><span class="n">format</span><span class="p">(</span><span class="n">printf</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">)))</span>
+<span class="k">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">ffi_error</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">func</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">format</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="kt">va_list</span><span class="w"> </span><span class="n">argp</span><span class="p">;</span>
+<span class="w">  </span><span class="n">va_start</span><span class="p">(</span><span class="n">argp</span><span class="p">,</span><span class="w"> </span><span class="n">format</span><span class="p">);</span>
+<span class="w">  </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s: &quot;</span><span class="p">,</span><span class="w"> </span><span class="n">func</span><span class="p">);</span>
+<span class="w">  </span><span class="n">vprintf</span><span class="p">(</span><span class="n">format</span><span class="p">,</span><span class="w"> </span><span class="n">argp</span><span class="p">);</span>
+<span class="w">  </span><span class="n">va_end</span><span class="p">(</span><span class="n">argp</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>The macro is used like this:</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="nf">copy_to_buffer</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">len</span><span class="p">,</span><span class="w"> </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">data</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">((</span><span class="kt">size_t</span><span class="p">)</span><span class="w"> </span><span class="n">len</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">strbuf</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">FFI_ERROR</span><span class="p">(</span><span class="s">&quot;length %d is too large for temporary buffer</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">len</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>The <code>__func__</code> macro expands to the function name where the macro is used, so the error message
+looks like this:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">copy_to_buffer</span><span class="o">:</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="mi">123</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">too</span><span class="w"> </span><span class="n">large</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">temporary</span><span class="w"> </span><span class="n">buffer</span>
+</code></pre></div>
+
+<p>The <code>__attribute__</code> above the function declaration is optional and just helps in checking
+for <code>printf</code> argument errors.</p>
+<h2>Hash Table Iteration</h2>
+<p>In one project I am working on I wrote the following macro for iterating over a hash table:</p>
+<div class="codehilite"><pre><span></span><code><span class="cm">/** An iterator for a hash table. */</span>
+<span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">i</span><span class="p">;</span><span class="w">       </span><span class="c1">// Current bucket index.</span>
+<span class="w">  </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">key</span><span class="p">;</span><span class="w">  </span><span class="c1">// Current bucket key.</span>
+<span class="w">  </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">value</span><span class="p">;</span><span class="w">      </span><span class="c1">// Current bucket value.</span>
+<span class="p">}</span><span class="w"> </span><span class="n">tbl_Iter</span><span class="p">;</span>
+
+<span class="cp">#define TBL_ITERATE(it, tbl) for (                  \</span>
+<span class="cp">    tbl_Iter it = { .i = 0 };                       \</span>
+<span class="cp">    it.i &lt; (tbl)-&gt;capacity &amp;&amp; (it = (tbl_Iter) {    \</span>
+<span class="cp">      .i = it.i,                                    \</span>
+<span class="cp">      .key = (tbl)-&gt;buckets[it.i].key,              \</span>
+<span class="cp">      .value = (tbl)-&gt;buckets[it.i].value }, true); \</span>
+<span class="cp">    it.i += 1) if (!(tbl)-&gt;buckets[it.i].flag)</span>
+</code></pre></div>
+
+<p>This is very specific to one hash table implementation so it might not be easy to adapt to other
+hash tables, but here is how I would use it in the project where it lives:</p>
+<div class="codehilite"><pre><span></span><code><span class="w">  </span><span class="n">HashTable</span><span class="o">*</span><span class="w"> </span><span class="n">tbl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">new_hashtable</span><span class="p">();</span>
+<span class="w">  </span><span class="n">tbl_insert</span><span class="p">(</span><span class="n">tbl</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">ast_call</span><span class="p">(...));</span>
+<span class="w">  </span><span class="n">TBL_ITERATE</span><span class="p">(</span><span class="n">it</span><span class="p">,</span><span class="w"> </span><span class="n">tbl</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="n">it</span><span class="p">.</span><span class="n">key</span><span class="p">;</span>
+<span class="w">    </span><span class="n">AstNode</span><span class="o">*</span><span class="w"> </span><span class="n">node</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">AstNode</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="n">it</span><span class="p">.</span><span class="n">value</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+</code></pre></div>
+
+<h2>Addendum: clang-format</h2>
+<p>If you use the for-each style macros like the ones above (<code>FOR_EACH</code> or <code>TBL_ITERATE</code>), you can add the <code>ForEachMacros</code> option to your <code>.clang-format</code> so that you get formatting to look better for these macros:</p>
+<div class="codehilite"><pre><span></span><code>ForEachMacros: [&#39;FOR_EACH&#39;, &#39;TBL_ITERATE&#39;]
+</code></pre></div>
+        </main>
+        <footer>Posted on 2025-12-18<br/>Copyright &copy; Jesper Öqvist</footer>
+    </div>
+  </table>
+</body>
+</html>

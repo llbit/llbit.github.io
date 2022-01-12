@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Renaming Master/Main in Git</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16" type="image/vnd.microsoft.icon">
+<link href="/assets/style.css" rel="stylesheet" type="text/css">
+<link href="/assets/highlight.css" rel="stylesheet" type="text/css">
+
+</head>
+<a name="top"></a>
+<body>
+    <header id="header">
+        <div class="column">
+        <a href="/" id="site-title">Low-Level Bits</a>
+        </div>
+    </header>
+    <div class="column">
+        <main>
+          <h1>Renaming Master/Main in Git</h1>
+<!-- date={2024-06-11} -->
+
+<p>TL;DR: Add an alias for the current branch with this Bash one-liner:</p>
+<div class="codehilite"><pre><span></span><code>git<span class="w"> </span>symbolic-ref<span class="w"> </span>refs/heads/m<span class="w"> </span>refs/heads/<span class="k">$(</span>git<span class="w"> </span>rev-parse<span class="w"> </span>--abbrev-ref<span class="w"> </span>HEAD<span class="k">)</span>
+</code></pre></div>
+
+<p>Git, and many source code hosting websites like GitHub and GitLab, decided
+to change the default branch name from <code>master</code> to <code>main</code> a few years ago. So
+new repositories have <code>main</code> as the mainline branch name and older repositories
+instead use <code>master</code> for the most part.</p>
+<p>Although I slightly prefer <code>main</code> for the simple reason that it's marginally
+simpler to type than <code>master</code>, I find this revisionist trend of constantly
+renaming stuff in software highly annoying. This is a common occurrence in
+programming APIs and tools where the developers suddenly decide that <code>destDir</code>
+is not descriptive and must be changed to <code>destinationDirectory</code>, forcing all
+users of the software to adapt if they want to use the new version.</p>
+<p>The Gradle build system is an example of this. Gradle has done several pedantic
+and overly descriptive renaming changes which have forced me to do trivial and
+from my perspective entirely pointless changes in my build scripts.</p>
+<p>I wonder how many years of developer productivity have been wasted on the sum
+of all those moments of inconvenience and confusion caused by pointless renames
+in software that we all use.</p>
+<p>Anyway back to Git, I recently found a very nice solution to my annoyance with
+having different names for the main branch in different repositories.
+Apparently <a href="https://git-scm.com/docs/git-symbolic-ref">Git allows us to make symbolic
+references</a> from one branch name to
+another, so my solution is to just make a symbolic reference <code>m</code> pointing to
+either <code>main</code> or <code>master</code> depending on the repository. This is done with the
+following command:</p>
+<div class="codehilite"><pre><span></span><code>git<span class="w"> </span>symbolic-ref<span class="w"> </span>refs/heads/m<span class="w"> </span>refs/heads/main
+</code></pre></div>
+
+<p>Replace <code>main</code> by whatever branch you want to make an alias for.  Alternatively, the
+following command adds an alias for the <em>current branch</em></p>
+<div class="codehilite"><pre><span></span><code>git<span class="w"> </span>symbolic-ref<span class="w"> </span>refs/heads/m<span class="w"> </span>refs/heads/<span class="k">$(</span>git<span class="w"> </span>rev-parse<span class="w"> </span>--abbrev-ref<span class="w"> </span>HEAD<span class="k">)</span>
+</code></pre></div>
+
+<p>I can do
+this once for every repository I am working on and thereafter I can always use
+my own standardized main branch name <code>m</code> which is shorter and easier to type
+than both <code>main</code> and <code>master</code>.</p>
+<p>For example</p>
+<div class="codehilite"><pre><span></span><code>git<span class="w"> </span>checkout<span class="w"> </span>feature-branch
+git<span class="w"> </span>diff<span class="w"> </span>m
+git<span class="w"> </span>merge<span class="w"> </span>m
+git<span class="w"> </span>checkout<span class="w"> </span>m
+</code></pre></div>
+
+<p>The one caveat to this is that the default merge commit message will mention
+the branch name <code>m</code> although you might want to use the actual branch name.</p>
+<p>As a side note I highly recommend creating aliases for your most used git
+commands. For example</p>
+<div class="codehilite"><pre><span></span><code>git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>alias.co<span class="w"> </span>checkout
+git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>alias.d<span class="w"> </span>diff
+</code></pre></div>
+
+<p>I even have a Bash alias <code>g</code> for <code>git</code> so that I can type <code>g co m</code> instead
+of <code>git checkout master</code>.</p>
+        </main>
+        <footer>Posted on 2024-06-11<br/>Copyright &copy; Jesper Öqvist</footer>
+    </div>
+  </table>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Julia Oddities</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16" type="image/vnd.microsoft.icon">
+<link href="/assets/style.css" rel="stylesheet" type="text/css">
+<link href="/assets/highlight.css" rel="stylesheet" type="text/css">
+
+</head>
+<a name="top"></a>
+<body>
+    <header id="header">
+        <div class="column">
+        <a href="/" id="site-title">Low-Level Bits</a>
+        </div>
+    </header>
+    <div class="column">
+        <main>
+          <h1>Julia Oddities</h1>
+<!-- date={2022-10-27} -->
+
+<p><a href="https://julialang.org/">The Julia language</a> is in general very well-designed. However, no
+programming language is perfect and there are some rough edges or unexpected
+behaviors even in Julia.</p>
+<p>In this post I document some of the interesting, quirky, or unexpected
+behaviors I have noticed in Julia.  Some of these are well-known and others are
+obscure. I will occasionally update this post as I find more interesting
+things to mention.</p>
+<h2>String Concatenation</h2>
+<p>Probably the most common Julia oddity is that <code>+</code> does not concatenate strings
+as is common in many other languages that have a string concatenation operator.</p>
+<p>In Julia the standard string concatenation operator is <code>*</code>. The Julia
+developers are aware that this is an unintuitive choice so they even note this
+and <a href="https://docs.julialang.org/en/v1/manual/strings/#man-concatenation">explain their reasoning in the Julia documentation</a>.
+Essentially the argument for not using <code>+</code> like most other programming
+languages is that <code>+</code> in mathematics usually denotes a commutative
+operation but string concatenation does not commute.</p>
+<p>There are more than one way to concatenate a string, however. One can also
+use the standard <code>string()</code> function like so: <code>string("a", "b", "c")</code>.</p>
+<p>If you still want to use <code>+</code> to concatenate strings you can overload the
+<code>+</code> operator:</p>
+<div class="codehilite"><pre><span></span><code><span class="o">+</span><span class="p">(</span><span class="n">s1</span><span class="o">::</span><span class="kt">AbstractString</span><span class="p">,</span><span class="w"> </span><span class="n">ss</span><span class="o">::</span><span class="kt">AbstractString</span><span class="o">...</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">string</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span><span class="w"> </span><span class="n">ss</span><span class="o">...</span><span class="p">)</span>
+<span class="s">&quot;much&quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&quot; better&quot;</span>
+</code></pre></div>
+
+<h2>Default Arguments</h2>
+<p>Julia allows an argument to have a default value, but the type of the default
+value is not statically checked. Therefore it is possible to declare a default
+argument value that does not match the type of the argument, for example:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">foo</span><span class="p">(</span><span class="o">::</span><span class="kt">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;3.1415&quot;</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">println</span><span class="p">(</span><span class="s">&quot;foo(::Int)&quot;</span><span class="p">)</span>
+<span class="n">foo</span><span class="p">()</span>
+</code></pre></div>
+
+<p>Here, the call to <code>foo()</code> results in the default argument expression <code>"3.1415"</code>
+being evaluated and passed to <code>foo(::Int)</code> but that does not work as the
+expression does not match the argument type. Instead, we get the error
+<code>MethodError: no method matching foo(::String)</code>.</p>
+<p>Even more confusingly, if we add another function with the same name that accepts a <code>String</code>
+argument then that other function is called instead of our original function.</p>
+<div class="codehilite"><pre><span></span><code><span class="n">foo</span><span class="p">(</span><span class="o">::</span><span class="kt">String</span><span class="p">)</span><span class="w">         </span><span class="o">=</span><span class="w"> </span><span class="n">println</span><span class="p">(</span><span class="s">&quot;foo(::String)&quot;</span><span class="p">)</span>
+<span class="n">foo</span><span class="p">(</span><span class="o">::</span><span class="kt">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;3.1415&quot;</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">println</span><span class="p">(</span><span class="s">&quot;foo(::Int)&quot;</span><span class="p">)</span>
+
+<span class="n">foo</span><span class="p">()</span>
+<span class="n">foo</span><span class="p">(</span><span class="mi">101</span><span class="p">)</span>
+</code></pre></div>
+
+<p>This code outputs:</p>
+<div class="codehilite"><pre><span></span><code>foo(::String)
+foo(::Int)
+</code></pre></div>
+
+<p>This has been a
+<a href="https://github.com/JuliaLang/julia/issues/7357">known problem in Julia for a while</a>.</p>
+<h2>Where-clause Parsing</h2>
+<p>If you are familiar with polymorphic functions in Julia, you might expect the following
+functions to be equivalent:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="o">::</span><span class="kt">T</span><span class="p">)</span><span class="o">::</span><span class="kt">Int64</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="kt">T</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span>
+
+<span class="k">function</span><span class="w"> </span><span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="o">::</span><span class="kt">T</span><span class="p">)</span><span class="o">::</span><span class="kt">Int64</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="kt">T</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span>
+<span class="k">end</span>
+</code></pre></div>
+
+<p>The first version of <code>f()</code> is written in assignment form, which is usually equivalent to
+the longer non-assignment form function-declaration style.
+In this case however, the Julia compiler gives the following error for the assignment form:</p>
+<div class="codehilite"><pre><span></span><code>julia&gt; f(x::T)::Int64 where T = 1
+ERROR: UndefVarError: T not defined
+</code></pre></div>
+
+<p>The problem here is that the function is parsed as if it was written <code>f(x::T)::(Int where T) = 1</code>
+and therefore <code>T</code> is not actually part of the function's <code>where</code>-clause.
+This is a <a href="https://github.com/JuliaLang/julia/issues/21847">known issue in the Julia parser</a>
+with no clear solution.</p>
+<h2>Negative Bit Shifts</h2>
+<p>The <code>&lt;&lt;</code> and <code>&gt;&gt;</code> operators are sometimes misunderstood. I think the original intention of these operators in C was just to shift the
+bits around in integer numbers, but the behavior is not fully specified for all possible combinations of signed/unsigned operands (so-called undefined behavior).</p>
+<p>Without going into great detail it can be noted that the right-hand operand is usually not allowed to be
+negative. For example modern C compilers warn against negative shifts and Python disallows it completely.
+However, Julia <strong>does</strong> allow negative right-hand operands. An expression <code>X &lt;&lt; -10</code> is equivalent to <code>X &gt;&gt; 10</code> and <code>Y &gt;&gt; -4</code> is equivalent to <code>Y &lt;&lt; 4</code> in Julia.
+This seems pretty logical to me and it is a nice little consistency fix when using the <code>&lt;&lt;</code> or <code>&gt;&gt;</code> operators to multiply or divide by powers of two.</p>
+<h2>UnitRange Normalization</h2>
+<p>The first time I typed <code>10:1</code> in the Julia REPL I was surprised at the output:</p>
+<div class="codehilite"><pre><span></span><code>julia&gt; 10:1
+10:9
+</code></pre></div>
+
+<p>The <code>10:1</code> syntax creates a <code>UnitRange</code> object and in the constructor it will
+normalize the range so that an empty range has <code>stop - start + 1 == 0</code>. This
+leads to the above range being constructed with <code>stop == 9</code> instead of <code>1</code>.
+This makes sense but it was also a little bit confusing when I first noticed
+this behaviour and didn't understand why it was happening.</p>
+<h2>Relative Module Paths</h2>
+<p>An import/using statement can use a relative module path which normally
+would look like <code>using ..Thing</code>. However, this is also perfectly fine:</p>
+<div class="codehilite"><pre><span></span><code>using .................Base.Base.Base.Base
+</code></pre></div>
+
+<p>The <a href="https://docs.julialang.org/en/v1/manual/modules/#Submodules-and-relative-paths">Julia documentation</a> states:</p>
+<blockquote>
+<p>A relative module qualifier starts with a period (.), which corresponds to the current module, and each successive . leads to the parent of the current module.</p>
+</blockquote>
+<p>A relative module path does not go past the topmost module, so additional
+periods are just ignored. Additionally, the name <code>Base</code> inside the <code>Base</code>
+module refers to itself so the <code>Base.Base.Base.Base</code> part is equivalent to just
+<code>Base</code>.</p>
+<p>Here is another strange example that works in Julia 1.9.2:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">Main</span><span class="o">.</span><span class="n">Main</span><span class="o">=</span><span class="p">(</span><span class="o">..</span><span class="p">)</span><span class="o">=</span><span class="n">Main</span><span class="o">.</span><span class="n">Main</span>
+<span class="kn">import</span> <span class="nn">...Main....Main...</span>
+</code></pre></div>
+        </main>
+        <footer>Posted on 2022-10-27<br/>Copyright &copy; Jesper Öqvist</footer>
+    </div>
+  </table>
+</body>
+</html>

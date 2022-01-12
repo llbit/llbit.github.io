@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vim as Manpager</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16" type="image/vnd.microsoft.icon">
+<link href="/assets/style.css" rel="stylesheet" type="text/css">
+<link href="/assets/highlight.css" rel="stylesheet" type="text/css">
+
+</head>
+<a name="top"></a>
+<body>
+    <header id="header">
+        <div class="column">
+        <a href="/" id="site-title">Low-Level Bits</a>
+        </div>
+    </header>
+    <div class="column">
+        <main>
+          <h1>Vim as Manpager</h1>
+<!-- date={2024-12-10} -->
+
+<p>Here is a tip for fellow Vim/Neovim users: it is possible to use Vim as a man page viewer by adding the following to your <code>.bashrc</code>/<code>.zshrc</code>/etc.</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">MANPAGER</span><span class="o">=</span><span class="s2">&quot;vim +MANPAGER --not-a-term -&quot;</span>
+</code></pre></div>
+
+<p>to use Neovim instead add this:</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">MANPAGER</span><span class="o">=</span><span class="s2">&quot;nvim +Man!&quot;</span>
+</code></pre></div>
+
+<p>I have been using this tip for a while now and it is awesome because links in the man pages can be followed using the usual Vim shortcut <code>Ctrl+]</code>.</p>
+        </main>
+        <footer>Posted on 2024-12-10<br/>Copyright &copy; Jesper Öqvist</footer>
+    </div>
+  </table>
+</body>
+</html>

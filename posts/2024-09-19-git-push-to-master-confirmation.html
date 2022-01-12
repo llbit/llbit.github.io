@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Git push confirmations for protected branches with a pre-push hook</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16" type="image/vnd.microsoft.icon">
+<link href="/assets/style.css" rel="stylesheet" type="text/css">
+<link href="/assets/highlight.css" rel="stylesheet" type="text/css">
+
+</head>
+<a name="top"></a>
+<body>
+    <header id="header">
+        <div class="column">
+        <a href="/" id="site-title">Low-Level Bits</a>
+        </div>
+    </header>
+    <div class="column">
+        <main>
+          <h1>Git push confirmations for protected branches with a pre-push hook</h1>
+<!-- date={2024-09-19} -->
+
+<p>Pre-push hooks can be used to do various checks on your local Git work before
+pushing to ensure that you are not unintentionally pushing incomplete commits
+to a shared or public repository. For example, Git includes a sample pre-push
+hook that checks for commits containing <code>WIP</code> in the message. You can normally
+find it in <code>.git/hooks/pre-push.sample</code> in your repository.</p>
+<p>I recently accidentally pushed to a <code>master</code> branch in a work repository which
+I had not intended to and decided to make a pre-push hook to confirm this for
+the future:</p>
+<div class="codehilite"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="nv">protected_branch</span><span class="o">=</span><span class="s1">&#39;master&#39;</span>
+<span class="nv">current_branch</span><span class="o">=</span><span class="k">$(</span>git<span class="w"> </span>symbolic-ref<span class="w"> </span>HEAD<span class="w"> </span><span class="p">|</span><span class="w"> </span>sed<span class="w"> </span>-e<span class="w"> </span><span class="s1">&#39;s,.*/\(.*\),\1,&#39;</span><span class="k">)</span>
+
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$protected_branch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">$current_branch</span><span class="w"> </span><span class="o">]</span>
+<span class="k">then</span>
+<span class="w">    </span><span class="nb">read</span><span class="w"> </span>-p<span class="w"> </span><span class="s2">&quot;You&#39;re about to push </span><span class="si">${</span><span class="nv">protected_branch</span><span class="si">}</span><span class="s2">, is that what you intended? [y|n] &quot;</span><span class="w"> </span>-n<span class="w"> </span><span class="m">1</span><span class="w"> </span>-r<span class="w"> </span>&lt;<span class="w"> </span>/dev/tty
+<span class="w">    </span><span class="nb">echo</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="nv">$REPLY</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s1">&#39;^[Yy]$&#39;</span><span class="w"> </span>&gt;<span class="w"> </span>/dev/null
+<span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="nv">$?</span>
+<span class="k">else</span>
+<span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="c1"># push will execute</span>
+<span class="k">fi</span>
+</code></pre></div>
+
+<p>This Bash script needs to be placed in a file named <code>repo/.git/hooks/pre-push</code>.
+The file must be executable (<code>chmod u+x pre-push</code>).  This script isn't perfect:
+it will warn if you try to delete a remote branch, for example <code>git push -d
+origin branch-to-delete</code>. Although this is a push that is not affecting the
+current branch but if your current working branch is the protected branch then
+you will get the confirmation anyway.</p>
+<p>If your repository is in a submodule of another Git repository the location of
+the pre-push hook is different.  Say your main repository is <code>repo</code> and the
+name of the submodule the hook should work in is <code>sub</code> then the pre-push hook
+should be at <code>repo/.git/modules/sub/hooks/pre-push</code>.</p>
+        </main>
+        <footer>Posted on 2024-09-19<br/>Copyright &copy; Jesper Öqvist</footer>
+    </div>
+  </table>
+</body>
+</html>
