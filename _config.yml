@@ -20,12 +20,12 @@
 
 title: Low-Level Bits
 # email: your-email@example.com
-description: >- # this means to ignore newlines until "baseurl:"
-  Testing
+#description: >- # this means to ignore newlines until "baseurl:"
+#  Testing
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
 # twitter_username: jekyllrb
-github_username:  llbit
+github_username: llbit
 
 # Build settings
 theme: minima
