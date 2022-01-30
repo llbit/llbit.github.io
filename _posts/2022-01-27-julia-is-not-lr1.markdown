@@ -44,15 +44,15 @@ w = WHITESPACE
 ```
 
 The `es` production represents an expression list, which is separated by
-whitespace(s).  An expression `e` can either be a name (`n = ID`) or an
-assignment (`n = e`).  There can be whitespace between the left-hand-side of
+whitespace(s).  An expression `e` can either be a name `n` or an
+assignment `n w EQ e`.  There can be whitespace between the left-hand-side of
 the assignment and the equals operator.  There can also be whitespace after the
-equals operator but I omit it here for simplicity's sake.  This grammar is
+equals operator `EQ` but I omit it here for simplicity's sake.  This grammar is
 not LR(1) because when the parser encounters an `ID` token with a `WHITESPACE` token
 in the lookahead it can either reduce the `ID` to an expression or shift it
-to build an assignment later. Since the LR(1) parser must decide which action to take
-purely based on the `WHITESPACE` in the lookahead, it cannot unambiguously choose the
+to build an assignment later. Since an LR(1) parser must decide which action to take
+based only on the `WHITESPACE` in the lookahead, it cannot unambiguously choose the
 correct action as always choosing to shift or reduce will make some Julia expressions
-not parse correctly.
+parse incorrectly.
 
 [julia]: https://julialang.org/
