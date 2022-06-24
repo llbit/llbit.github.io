@@ -2,7 +2,7 @@
 layout: post
 title: "Julia is not LR(1)"
 date: 2022-01-27 17:00:00 +0100
-categories: programming
+categories: programming, parsing
 ---
 The [Julia programm language][julia] has a very minimalistic grammar, avoiding
 many keywords or syntax elements that are common in other languages such as
