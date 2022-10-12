@@ -4,7 +4,7 @@ title: "Julia is not LR(1)"
 date: 2022-01-27 17:00:00 +0100
 categories: programming, parsing
 ---
-The [Julia programm language][julia] has a very minimalistic grammar, avoiding
+The [Julia programming language][julia] has a very minimalistic grammar, avoiding
 many keywords or syntax elements that are common in other languages such as
 braces and semicolons.  For example, here is a small piece of Julia code:
 
@@ -16,8 +16,8 @@ function hello(x)
 end
 {% endhighlight %}
 
-At a glance, Julia code looks similar to Python. The most notable differences
-are that that Julia requires `end` after each block of code and does not require
+At a glance, Julia code looks similar to [Python][python]. The most notable differences
+are that that Julia requires `end` after each block of code and does not have
 colons after the function header or if-statement condition. Although properly indented
 code will look very similar to Python code, the Julia parser does not care about indentation.
 
@@ -32,8 +32,8 @@ and the parameter list.
 
 I recently attempted to write an LR(1) grammar for the Julia language, to see
 if it would be possible.  It turned out to not be possible due to the
-whitespace sensitivity in Julia. Here is a small but essential subset of my Julia
-grammar which is not LR(1):
+whitespace sensitivity in Julia. Here is a small essential subset of my Julia
+grammar which is unambiguous and context-free but not LR(1):
 
 ```
 program = es
@@ -69,3 +69,4 @@ currently 51 shift/reduce conflicts and 34 reduce/reduce conflicts.
 
 [julia]: https://julialang.org/
 [GLR]: https://en.wikipedia.org/wiki/GLR_parser
+[python]: https://www.python.org/
