@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Julia Oddities"
-date: 2022-01-27 17:00:00 +0100
+date: 2022-10-27 17:00:00 +0100
 categories: programming, julia
 ---
 [The Julia language][julia] is overall well-designed, but
