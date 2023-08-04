@@ -4,9 +4,37 @@ title: "Julia Oddities"
 date: 2022-10-27 17:00:00 +0100
 categories: programming, julia
 ---
-[The Julia language][julia] is overall well-designed, but
-I have found some rough edges where the language did not work as I had expected.
-Here I will describe the two most interesting unexpected behaviors I've seen thus far in Julia.
+[The Julia language][julia] is in general very well-designed. However, no
+programming language is perfect and there are some rough edges or unexpected
+behaviors even in Julia.
+
+In this post I document some of the interesting, quirky, or unexpected
+behaviors I have noticed in Julia.  Some of these are well-known and others are
+obscure. I will occasionally update this post as I find more interesting
+things to mention.
+
+## String Concatenation
+
+Probably the most common Julia oddity is that `+` does not concatenate strings
+as is common in many other languages that have a string concatenation operator.
+
+In Julia the standard string concatenation operator is `*`. The Julia
+developers are aware that this is an unintuitive choice so they even note this
+and [explain their reasoning in the Julia documentation][julia-strcat].
+Essentially the argument for not using `+` like most other programming
+languages is that `+` in mathematics usually denotes a commutative
+operation but string concatenation does not commute.
+
+There are more than one way to concatenate a string, however. One can also
+use the standard `string()` function like so: `string("a", "b", "c")`.
+
+If you still want to use `+` to concatenate strings you can overload the
+`+` operator:
+
+{% highlight julia %}
++(s1::AbstractString, ss::AbstractString...) = string(s1, ss...)
+"much" + " better"
+{% endhighlight %}
 
 ## Default Arguments
 
@@ -72,5 +100,16 @@ and therefore `T` is not actually part of the function's `where`-clause.
 This is a [known issue in the Julia parser](https://github.com/JuliaLang/julia/issues/21847)
 with no clear solution.
 
+## Negative Bit Shifts
 
+The `<<` and `>>` operators are sometimes misunderstood. I think the original intention of these operators in C was just to shift the
+bits around in integer numbers, but the behavior is not fully specified for all possible combinations of signed/unsigned operands (so-called undefined behavior).
+
+Without going into great detail it can be noted that the right-hand operand is usually not allowed to be
+negative. For example modern C compilers warn against negative shifts and Python disallows it completely.
+However, Julia **does** allow negative right-hand operands. An expression `X << -10` is equivalent to `X >> 10` and `Y >> -4` is equivalent to `Y << 4` in Julia.
+This seems pretty logical to me and it is a nice little consistency fix when using the `<<` or `>>` operators to multiply or divide by powers of two.
+
+
+[julia-strcat]: https://docs.julialang.org/en/v1/manual/strings/#man-concatenation
 [julia]: https://julialang.org/
