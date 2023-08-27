@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Filename Fuckups"
+title: "Filename Fuck-ups"
 date: 2023-08-26 13:19:00 +0100
 categories: programming
 ---
