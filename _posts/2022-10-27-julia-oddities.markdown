@@ -110,6 +110,21 @@ negative. For example modern C compilers warn against negative shifts and Python
 However, Julia **does** allow negative right-hand operands. An expression `X << -10` is equivalent to `X >> 10` and `Y >> -4` is equivalent to `Y << 4` in Julia.
 This seems pretty logical to me and it is a nice little consistency fix when using the `<<` or `>>` operators to multiply or divide by powers of two.
 
+## UnitRange Normalization
+
+The first time I typed `10:1` in the Julia REPL I was surprised at the output:
+
+```
+julia> 10:1
+10:9
+```
+
+The `10:1` syntax creates a `UnitRange` object and in the constructor it will
+normalize the range so that an empty range has `stop - start + 1 == 0`. This
+leads to the above range being constructed with `stop == 9` instead of `1`.
+This makes sense but it was also a little bit confusing when I first noticed
+this behaviour and didn't understand why it was happening.
+
 
 [julia-strcat]: https://docs.julialang.org/en/v1/manual/strings/#man-concatenation
 [julia]: https://julialang.org/
