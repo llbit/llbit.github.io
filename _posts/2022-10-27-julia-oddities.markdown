@@ -125,6 +125,24 @@ leads to the above range being constructed with `stop == 9` instead of `1`.
 This makes sense but it was also a little bit confusing when I first noticed
 this behaviour and didn't understand why it was happening.
 
+## Relative Module Paths
+
+An import/using statement can use a relative module paths which normally
+would look like `using ..Thing`. However, this is also perfectly fine:
+
+```
+using .................Base.Base.Base.Base
+```
+
+The [Julia documentation](https://docs.julialang.org/en/v1/manual/modules/#Submodules-and-relative-paths) states:
+
+> A relative module qualifier starts with a period (.), which corresponds to the current module, and each successive . leads to the parent of the current module.
+
+A relative module path does not go past the topmost module, so additional
+periods are just ignored. Additionally, the name `Base` inside the `Base`
+module refers to itself so the `Base.Base.Base.Base` part is equivalent to just
+`Base`.
+
 
 [julia-strcat]: https://docs.julialang.org/en/v1/manual/strings/#man-concatenation
 [julia]: https://julialang.org/
