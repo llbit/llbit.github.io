@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Declaration Chains for Name Analysis"
-date: 2023-08-26 09:08:00 +0100
+date: 2023-09-17 09:08:00 +0100
 categories: programming
 ---
 I made a very nice and efficient name analysis system for a compiler that I am
