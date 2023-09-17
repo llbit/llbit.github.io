@@ -5,8 +5,9 @@ date: 2023-09-17 09:08:00 +0100
 categories: programming
 ---
 I made a very nice and efficient name analysis system for a compiler that I am
-working on.  I will try to describe how it works in this post. It is possible
-that this is a common idea that I just have not encountered before.
+working on.  I have not seen this method of doing name analysis before so I
+will try to describe how it works in this post. It is possible that this is a
+common idea that I just have not encountered before.
 
 In name analysis it is common to use one hash table for each name scope, but in
 my system I use only a single hash table and two stacks.
