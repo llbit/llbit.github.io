@@ -27,7 +27,7 @@ this optimization does, and how it works.
 ## Partial Redundancy Elimination
 *Partial Redundancy Elimination* is a compiler optimization which aims to remove redundant
 computations in a program. A program with (partial) redundancies may look like this:
-    
+
 ### Example 1
 {% highlight c %}
 if (a < c) {

@@ -32,6 +32,8 @@ struct AstNode {
 };
 {% endhighlight %}
 
+![prev_decl pointers illustrated in a simple program](/assets/prev_decl.png)
+
 The current head of the declaration chain for each name is stored in a global
 hash table that maps declaration names to declaration nodes. Initially this
 hash table is empty and all `prev_decl` pointers are `NULL`.
