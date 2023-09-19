@@ -127,7 +127,7 @@ this behaviour and didn't understand why it was happening.
 
 ## Relative Module Paths
 
-An import/using statement can use a relative module paths which normally
+An import/using statement can use a relative module path which normally
 would look like `using ..Thing`. However, this is also perfectly fine:
 
 ```
@@ -142,6 +142,13 @@ A relative module path does not go past the topmost module, so additional
 periods are just ignored. Additionally, the name `Base` inside the `Base`
 module refers to itself so the `Base.Base.Base.Base` part is equivalent to just
 `Base`.
+
+Here is another strange example that works in Julia 1.9.2:
+
+```
+Main.Main=(..)=Main.Main
+import ...Main....Main...
+```
 
 
 [julia-strcat]: https://docs.julialang.org/en/v1/manual/strings/#man-concatenation
