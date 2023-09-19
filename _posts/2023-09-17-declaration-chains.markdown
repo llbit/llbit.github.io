@@ -22,8 +22,8 @@ declaration chains so that call resolution and duplicate declaration checking
 can be done with the declaration chain.
 
 In my case the AST nodes are objects of `struct AstNode`. This contains
-declaration chains as intrusive lists with a pointer pointing to the previous
-declaration:
+declaration chains as [intrusive singly linked lists](intrusive lists) with a
+pointer pointing to the previous declaration:
 
 {% highlight c %}
 struct AstNode {
@@ -103,3 +103,5 @@ void pop_scope(State s)
 During name analysis each non-declaration use of a name is bound to the
 matching declaration chain by doing `tbl_lookup(s.names, name)` to get the
 current head of the matching name chain.
+
+[intrusive lists]: https://stackoverflow.com/questions/3361145/intrusive-lists
