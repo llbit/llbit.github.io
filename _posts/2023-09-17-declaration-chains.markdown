@@ -78,6 +78,7 @@ const char* ast_decl_name(const AstNode* decl);
 
 void declare(State s, AstNode* decl)
 {
+  const char* name = ast_decl_name(decl);
   decl->prev_decl = tbl_lookup(s.names, name);
   tbl_insert(s.names, name, decl);
   s.stack[s.stack_last++] = decl;
@@ -92,7 +93,7 @@ void push_scope(State s)
 void pop_scope(State s)
 {
   for (int i = 0; i < s.scope[s.scope_last]; ++i) {
-    AstNode* decl = s.stack[s.stack_last--]->prev_decl
+    AstNode* decl = s.stack[s.stack_last--];
     tbl_insert(s.names, ast_decl_name(decl), decl->prev_decl);
   }
   s.scope_last -= 1;
@@ -100,5 +101,5 @@ void pop_scope(State s)
 {% endhighlight %}
 
 During name analysis each non-declaration use of a name is bound to the
-matching declaration chain by doing `tbl_lookup(state->names, name)` to get the
+matching declaration chain by doing `tbl_lookup(s.names, name)` to get the
 current head of the matching name chain.
