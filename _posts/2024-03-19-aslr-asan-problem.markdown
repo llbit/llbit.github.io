@@ -19,7 +19,7 @@ empty `main` function.  In fact at this point I could reliably reproduce the
 error by running this one-liner in the terminal:
 
 {% highlight bash %}
-echo "int main() {}" | gcc -O3 -fsanitize=address -xc - && for i in {1..100}; do ./a.out; done
+echo "int main() {}" | gcc -fsanitize=address -xc - && for i in {1..100}; do ./a.out; done
 {% endhighlight %}
 
 The for-loop made the crash reliably appear at least once every time the command was
