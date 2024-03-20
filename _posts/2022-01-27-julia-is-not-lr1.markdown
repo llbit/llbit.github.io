@@ -45,8 +45,8 @@ w = WHITESPACE
 
 The `es` production represents an expression list, which is separated by
 whitespace(s).  An expression `e` can either be a name `n` or an
-assignment `n w EQ e`.  There can be whitespace `w` between the left-hand-side of
-the equals operator `EQ`.  There can also be whitespace after `EQ`
+assignment `n w EQ e`.  There can be whitespace `w` preceding
+the assignment operator `EQ`.  There can also be whitespace after `EQ`
 but I omit it here for simplicity's sake.  This grammar is
 not LR(1) because when the parser encounters an `ID` token with a `WHITESPACE` token
 in the lookahead it can either reduce the `ID` to an expression or shift it
