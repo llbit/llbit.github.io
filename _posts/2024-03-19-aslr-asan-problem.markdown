@@ -28,7 +28,7 @@ run.
 At this point I started to suspect a package update on my system was at fault.
 Long story short, it turns out that a change to the address-space layout
 randomization (ASLR) in the Ubuntu-packaged Linux kernel version 6.5.0-25
-caused the issue. As far as I can tell kernel versions before that build used 28 bits
+caused the issue. As far as I can tell kernel versions before that build used 28 random bits
 on 64-bit systems and the change upped it to the maximum possible which was 32.
 
 The exact change is documented in the [changelog for Ubuntu package linux
