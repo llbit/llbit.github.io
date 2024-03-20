@@ -52,8 +52,8 @@ being evaluated and passed to `foo(::Int)` but that does not work as the
 expression does not match the argument type. Instead, we get the error
 `MethodError: no method matching foo(::String)`.
 
-Even more confusingly, if we add another function with the same name that accepts a `String` as
-type then that other function is called instead of our original function.
+Even more confusingly, if we add another function with the same name that accepts a `String`
+argument then that other function is called instead of our original function.
 
 {% highlight julia %}
 foo(::String)         = println("foo(::String)")
