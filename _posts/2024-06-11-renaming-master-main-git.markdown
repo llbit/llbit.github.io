@@ -2,7 +2,7 @@
 layout: post
 title: "Renaming Master/Main in Git"
 date: 2024-06-11 23:10:00 +0100
-categories: programming
+categories: git
 ---
 Git, and many source code hosting websites like GitHub and GitLab, decided
 to change the default branch name from `master` to `main` a few years ago. So
