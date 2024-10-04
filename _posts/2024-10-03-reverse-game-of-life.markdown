@@ -9,8 +9,7 @@ A few days ago the YouTube channel [Alpha Phoenix uploaded a
 video about running Conway's Game of Life backwards.](https://youtu.be/g8pjrVbdafY?feature=shared) It's a great video,
 but the solution Alpha Phoenix used was based on using a constraint solver and
 it inspired me to try implementing my own solver for reverse Game of Life to see how a backtracking search would perform in comparison.
-
-I implemented a basic backtracking search algorithm in Julia. It runs pretty quickly on small inputs but gets exponentially slower for larger inputs.
+So I wrote a backtracking search solution in Julia. It runs pretty quickly on small inputs but gets exponentially slower for larger inputs.
 
 Here is an example of one of my test cases:
 
@@ -38,6 +37,13 @@ The problem with my solutions is that they grow in size, each predecessor state 
 Anyway here is my Julia code if you want to try it for yourself:
 
 {% highlight julia %}
+b_north = 1<<0 + 1<<1 + 1<<2
+b_south = 1<<6 + 1<<7 + 1<<8
+b_ew = 1<<3 + 1<<4 + 1<<5  # line east-west
+b_west = 1<<0 + 1<<3 + 1<<6
+b_east = 1<<2 + 1<<5 + 1<<8
+b_ns = 1<<1 + 1<<4 + 1<<7 # line north-south
+
 neighbors(G, r, c) = G[r-1, c] + G[r-1, c-1] + G[r-1, c+1] + G[r+1, c] + G[r+1, c-1] + G[r+1, c+1] + G[r, c-1] + G[r, c+1]
 
 function sim(G)
@@ -125,39 +131,53 @@ function find_ancestors()
     end
 end
 
-function search(F, done, P, i, H, W)
-    if i >= H*W
-        return true
-    end
-    # r,c = 2 + div(i, W), 2 + i % W
-    r,c = 2 + i % H, 2 + div(i, H)
-    mask = 0
-    value = 0
-    for k in 0:8
-        x, y = k%3, div(k, 3)
-        mask |= done[r+y-1,c+x-1] << k
-        value |= F[r+y-1,c+x-1] << k
-    end
-    value &= mask
-    for p in P[r,c]
-        if (p & mask) == value
-            for k in 0:8
-                x, y = k%3, div(k, 3)
-                done[r+y-1,c+x-1] = 1
-                F[r+y-1,c+x-1] = (p >> k) & 1
-            end
-            if search(F, done, P, i+1, H, W)
-                return true
-            end
-            # Undo change
-            for k in 0:8
-                x, y = k%3, div(k, 3)
-                done[r+y-1,c+x-1] = (mask >> k) & 1
-                F[r+y-1,c+x-1] = (value >> k) & 1
-            end
+function search(P)
+    H, W = size(P)
+    L = []
+    for c in 2:(W-1)
+        for r in 2:(H-1)
+            push!(L, (r,c))
         end
     end
-    return false
+    S = fill(1, length(L))
+    Q = fill(0, length(L))
+    i = 1
+    while i <= length(L)
+        r,c = L[i]
+        mask = value = 0
+        if r > 2
+            value = Q[i-1] >> 3
+            mask = b_north | b_ew
+        end
+        if c > 2
+            value |= (Q[i-H+2] >> 1) & (b_west | b_ns)
+            mask |= b_west | b_ns
+        end
+        value &= mask
+        while S[i] <= length(P[r,c])
+            p = P[r,c][S[i]]
+            if (p & mask) == value
+                Q[i] = p
+                break
+            end
+            S[i] += 1
+        end
+        if S[i] <= length(P[r,c])
+            i += 1
+        else
+            S[i] = 1
+            i -= 1
+            if i == 0
+                return nothing
+            end
+            S[i] += 1
+        end
+    end
+    F = fill(0, H, W)
+    for i in 1:length(L)
+        F[L[i]...] = (Q[i] >> 4) & 1
+    end
+    return F
 end
 
 function bitmask(u, v)
@@ -217,13 +237,6 @@ function reverse(filename::String)
             end
         end
     end
-
-    b_north = 1<<0 + 1<<1 + 1<<2
-    b_south = 1<<6 + 1<<7 + 1<<8
-    b_ew = 1<<3 + 1<<4 + 1<<5  # line east-west
-    b_west = 1<<0 + 1<<3 + 1<<6
-    b_east = 1<<2 + 1<<5 + 1<<8
-    b_ns = 1<<1 + 1<<4 + 1<<7 # line north-south
 
     for r in 3:(H-2)
         diff = Set{Int}()
@@ -300,15 +313,27 @@ function reverse(filename::String)
         end
     end
 
-    F = fill(0, H, W)
-    done = fill(0, H, W)
-    if search(F, done, possible, 0, H-2, W-2)
-        disp(F)
-    else
+    F = search(possible)
+    if F isa Nothing
         println("No solution found!")
+    else
+        disp(F)
     end
 end
 
 filename = "big_reverse.txt"
 @time reverse(filename)
 {% endhighlight %}
+
+This script expects a file named `big_reverse.txt` in the working directory containing a text representation of a Game of Life board where `#` denotes a living cell (all other non-newline characters are treated as dead). For example:
+
+```
+    ..................................................
+    .#####  ###### #    # ###### #####   ####  ######.
+    .#    # #      #    # #      #    # #      #     .
+    .#    # #####  #    # #####  #    #  ####  ##### .
+    .#####  #      #    # #      #####       # #     .
+    .#   #  #       #  #  #      #   #  #    # #     .
+    .#    # ######   ##   ###### #    #  ####  ######.
+    ..................................................
+```
