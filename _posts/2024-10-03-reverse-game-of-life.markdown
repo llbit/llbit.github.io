@@ -238,7 +238,7 @@ function reverse(filename::String)
         end
     end
 
-    for r in 3:(H-2)
+    for r in 2:(H-1)
         diff = Set{Int}()
         for p in possible[r,2]
             if (p & b_west) != 0 || count_ones(p & b_ns) == 3
@@ -254,7 +254,7 @@ function reverse(filename::String)
         end
         setdiff!(possible[r,W-1], diff)
     end
-    for c in 3:(W-2)
+    for c in 2:(W-1)
         diff = Set{Int}()
         for p in possible[2,c]
             if (p & b_north) != 0 || count_ones(p & b_ew) == 3
@@ -270,38 +270,6 @@ function reverse(filename::String)
         end
         setdiff!(possible[H-1,c], diff)
     end
-
-    diff = Set{Int}()
-    for p in possible[2,2]
-        if (p & (b_north | b_west)) != 0
-            push!(diff, p)
-        end
-    end
-    setdiff!(possible[2,2], diff)
-
-    diff = Set{Int}()
-    for p in possible[2,W-1]
-        if (p & (b_north | b_east)) != 0
-            push!(diff, p)
-        end
-    end
-    setdiff!(possible[2,W-1], diff)
-
-    diff = Set{Int}()
-    for p in possible[H-1,2]
-        if (p & (b_south | b_west)) != 0
-            push!(diff, p)
-        end
-    end
-    setdiff!(possible[H-1,2], diff)
-
-    diff = Set{Int}()
-    for p in possible[H-1,W-1]
-        if (p & (b_south | b_east)) != 0
-            push!(diff, p)
-        end
-    end
-    setdiff!(possible[H-1,W-1], diff)
 
     cull(G, possible, H, W)
 
