@@ -33,6 +33,9 @@ x = 0, y = 0, rule = B3/S23
 
 The problem with my solutions is that they grow in size, each predecessor state requires searching over more pixels which slows down the search a lot. For the `REVERSE` example the 3rd step took 15 seconds but the 4th step did not complete: I stopped it after more than 4 hours.
 
+Update: I rewrote and optimized my search function and finally the 4th iteration of the `REVERSE` example finished without a solution after 15 hours.
+If my code is correct the 3rd iteration shown above is [a so-called Garden of Eden](https://conwaylife.com/wiki/Garden_of_Eden), that is, a game state which has no predecessors.
+
 ## Julia Code
 Anyway here is my Julia code if you want to try it for yourself:
 
