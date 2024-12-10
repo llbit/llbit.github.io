@@ -308,3 +308,5 @@ This script expects a file named `big_reverse.txt` in the working directory cont
     .#    # ######   ##   ###### #    #  ####  ######.
     ..................................................
 ```
+
+Update: [here is my C implementation.](https://gist.github.com/llbit/c3d9604383696aefcfdd84f7487e7783)
