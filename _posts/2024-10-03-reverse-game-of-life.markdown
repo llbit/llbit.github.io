@@ -309,4 +309,538 @@ This script expects a file named `big_reverse.txt` in the working directory cont
     ..................................................
 ```
 
-Update: [here is my C implementation.](https://gist.github.com/llbit/c3d9604383696aefcfdd84f7487e7783)
+## C Code
+
+[Here is my C implementation:](https://gist.github.com/llbit/c3d9604383696aefcfdd84f7487e7783)
+
+{% highlight c %}
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <time.h>
+#include <stdbool.h>
+#include <stdint.h>
+
+#define b_north ((1<<0) + (1<<1) + (1<<2))
+#define b_south ((1<<6) + (1<<7) + (1<<8))
+#define b_ew    ((1<<3) + (1<<4) + (1<<5))
+#define b_west  ((1<<0) + (1<<3) + (1<<6))
+#define b_east  ((1<<2) + (1<<5) + (1<<8))
+#define b_ns    ((1<<1) + (1<<4) + (1<<7))
+#define b_n (b_north | b_ew)
+#define b_s (b_south | b_ew)
+#define b_e (b_east | b_ns)
+#define b_w (b_west | b_ns)
+
+typedef struct Line Line;
+struct Line {
+  char* text;
+  Line* next;
+};
+
+typedef struct {
+  int n;
+  uint64_t data[];
+} BitSet;
+
+typedef struct {
+  int n;
+  unsigned* data;
+} Array;
+
+static int count_ones(uint64_t x)
+{
+  int s = 0;
+  while (x != 0) {
+    s += x&1;
+    x >>= 1;
+  }
+  return s;
+}
+
+static BitSet* bs(int n)
+{
+  int k = (n + 63) / 64;
+  BitSet* bs = malloc(sizeof(BitSet) + 8 * k);
+  bs->n = k;
+  memset(bs->data, 0, 8 * k);
+  return bs;
+}
+
+static int bs_size(BitSet* bs)
+{
+  int s = 0;
+  for (int i = 0; i < bs->n; ++i) {
+    s += count_ones(bs->data[i]);
+  }
+  return s;
+}
+
+static void set_bit(BitSet* bs, int b)
+{
+  bs->data[b>>6] |= (1ULL<<(b & 0x3F));
+}
+
+static void clear_bit(BitSet* bs, int b)
+{
+  bs->data[b>>6] &= ~(1ULL<<(b & 0x3F));
+}
+
+static int get_bit(BitSet* bs, int b)
+{
+  return (bs->data[b>>6] >> (b & 0x3F)) & 1;
+}
+
+void disp(unsigned* board, int H, int W)
+{
+  for (int r = 0; r < H; ++r) {
+    for (int c = 0; c < W; ++c) {
+      printf("%c", board[r * W + c] ? '#' : ' ');
+    }
+    printf("\n");
+  }
+}
+
+int neighbors[][2] = {
+  {-1, -1}, {-1, 0}, {-1, 1},
+  {0, -1 },          {0, 1 },
+  {1, -1 }, {1, 0 }, {1, 1 },
+};
+int nsew[][2] = {
+                  {-2, 0},
+                  {-1, 0},
+ {0, -2}, {0, -1},         {0, 1}, {0, 2},
+                  {1, 0 },
+                  {2, 0 },
+};
+
+int count(unsigned* B, int H, int W, int r, int c)
+{
+  int n = 0;
+  for (int i = 0; i < 8; ++i) {
+    n += B[(r + neighbors[i][0])*W + c + neighbors[i][1]];
+  }
+  return n;
+}
+
+void sim(unsigned* start, unsigned* next, int H, int W)
+{
+  for (int r = 1; r < H-1; ++r) {
+    for (int c = 1; c < W-1; ++c) {
+      // count neighbors
+      int n = count(start, H, W, r, c);
+      if (start[r*W + c]) {
+        // 2-3 neighbors stay alive
+        next[r * W + c] = (n == 2 || n == 3) ? 1 : 0;
+      } else {
+        // 3 neighbors get born
+        next[r * W + c] = n == 3 ? 1 : 0;
+      }
+    }
+  }
+}
+
+static void enum_states(Array* live, Array* dead)
+{
+  int scratch[5*5];
+  int out[5*5];
+  memset(scratch, 0, sizeof(int) * 5 * 5);
+  for (int p = 0; p < (1<<9); ++p) {
+    for (int r = 0; r < 3; ++r) {
+      for (int c = 0; c < 3; ++c) {
+        scratch[(r+1)*5 + c + 1] = (p >> (r*3 + c)) & 1;
+      }
+    }
+    sim(scratch, out, 5, 5);
+    if (out[2*5 + 2]) {
+      live->data[live->n++] = p;
+    } else {
+      dead->data[dead->n++] = p;
+    }
+  }
+}
+
+static void search(Array* A, int H, int W)
+{
+  int n = 0;
+  int L[H*W][2];
+  for (int c = 1; c < W-1; ++c) {
+    for (int r = 1; r < H-1; ++r) {
+      L[n][0] = r;
+      L[n++][1] = c;
+    }
+  }
+  int Q[n];
+  int S[n];
+  S[0] = 0;
+  int i = 0;
+  while (true) {
+    int r = L[i][0];
+    int c = L[i][1];
+    int mask = 0;
+    int value = 0;
+    if (r > 1) {
+      value = Q[i-1] >> 3;
+      mask = b_north | b_ew;
+    }
+    if (c > 1) {
+      value |= (Q[i-H+2] >> 1) & (b_west | b_ns);
+      mask |= b_west | b_ns;
+    }
+    value &= mask;
+    Array aa = A[r*W + c];
+    while (S[i] < aa.n) {
+      int p = aa.data[S[i]];
+      if ((p & mask) == value) {
+        Q[i] = p;
+        break;
+      }
+      S[i] += 1;
+    }
+    if (S[i] < aa.n) {
+      i += 1;
+      if (i == n) {
+        break;
+      }
+      S[i] = 0;
+    } else {
+      S[i] = 0;
+      i -= 1;
+      if (i < 0) {
+        fprintf(stderr, "Input is a Garden of Eden.\n");
+        return;
+      }
+      S[i] += 1;
+    }
+  }
+  int board[H*W];
+  memset(board, 0, sizeof(int)*H*W);
+  for (i = 0; i < n; ++i) {
+    int r = L[i][0];
+    int c = L[i][1];
+    board[r*W + c] = (Q[i] >> 4) & 1;
+  }
+  disp(board, H, W);
+}
+
+static void cull(Array* A, int H, int W)
+{
+  BitSet* d1 = bs(H*W);
+  BitSet* d2 = bs(H*W);
+  Array q1 = {
+    .n = 0,
+    .data = malloc(sizeof(int) * H*W * 2),
+  };
+  Array q2 = {
+    .n = 0,
+    .data = malloc(sizeof(int) * H*W * 2),
+  };
+  for (int r = 1; r < H-1; ++r) {
+    for (int c = 1; c < W-1; ++c) {
+      q1.data[q1.n++] = r;
+      q1.data[q1.n++] = c;
+    }
+  }
+  int pp[][5] = {
+    { -1,  0, 0, 3, b_north | b_ew },
+    { -2,  0, 0, 6, b_north },
+    {  1,  0, 3, 0, b_south | b_ew },
+    {  2,  0, 6, 0, b_south },
+    {  0, -1, 0, 1, b_west | b_ns },
+    {  0, -2, 0, 2, b_west },
+    {  0,  1, 1, 0, b_east | b_ns },
+    {  0,  2, 2, 0, b_east },
+    { -1, -1, 0, 4, (1<<0) | (1<<1) | (1<<3) | (1<<4) },
+    {  1,  1, 4, 0, (1<<4) | (1<<5) | (1<<7) | (1<<8) },
+    { -1,  1, 0, 2, (1<<1) | (1<<2) | (1<<4) | (1<<5) },
+    {  1, -1, 2, 0, (1<<3) | (1<<4) | (1<<6) | (1<<7) },
+  };
+  int N = sizeof(pp) / sizeof(pp[0]);
+  int culled = 0;
+  bool change = true;
+  while (change) {
+    change = false;
+    for (int k = 0; k < q1.n; k += 2) {
+      int r = q1.data[k];
+      int c = q1.data[k + 1];
+      Array* A0 = A + (r*W + c);
+      for (int i = 0; i < A0->n; ++i) {
+        int p = A0->data[i];
+        int match = 0;
+        for (int w = 0; w < N; ++w) {
+          int r1 = r + pp[w][0];
+          int c1 = c + pp[w][1];
+          if (r1 >= 0 && r1 < H && c1 >= 0 && c1 < W) {
+            Array A1 = A[r1*W + c1];
+            int u = pp[w][2];
+            int v = pp[w][3];
+            int b = pp[w][4];
+            for (int j = 0; j < A1.n; ++j) {
+              if ((p & b) == ((u ? (A1.data[j] << u) : (A1.data[j] >> v)) & b)) {
+                match |= 1<<w;
+                break;
+              }
+            }
+          } else {
+            match |= 1<<w;
+          }
+        }
+        if (match != (1<<N)-1) {
+          A0->data[i] = A0->data[A0->n-1];
+          A0->n -= 1;
+          culled += 1;
+          change = true;
+          for (int w = 0; w < N; ++w) {
+            int r1 = r + pp[w][0];
+            int c1 = c + pp[w][1];
+            if (r1 >= 0 && r1 < H && c1 >= 0 && c1 < W && !get_bit(d2, r1*W + c1)) {
+              set_bit(d2, r1*W + c1);
+              q2.data[q2.n++] = r1;
+              q2.data[q2.n++] = c1;
+            }
+          }
+          break;
+        }
+      }
+    }
+    BitSet* d = d1;
+    d1 = d2;
+    d2 = d;
+    memset(d2->data, 0, 8*d1->n);
+    Array q = q1;
+    q1 = q2;
+    q2 = q;
+    q2.n = 0;
+  }
+  fprintf(stderr, "culled: %d\n", culled);
+  free(d1);
+  free(d2);
+  free(q1.data);
+  free(q2.data);
+}
+
+static int cmp_live(const void* pa, const void* pb)
+{
+  int a = count_ones(*(unsigned*) pa);
+  int b = count_ones(*(unsigned*) pb);
+  if ((a&(1<<4)) && !(b&(1<<4))) {
+    return -1;
+  }
+  if (!(a&(1<<4)) && (b&(1<<4))) {
+    return 1;
+  }
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+}
+
+static int cmp_dead(const void* pa, const void* pb)
+{
+  int a = count_ones(*(unsigned*) pa);
+  int b = count_ones(*(unsigned*) pb);
+  if ((a&(1<<4)) && !(b&(1<<4))) {
+    return 1;
+  }
+  if (!(a&(1<<4)) && (b&(1<<4))) {
+    return -1;
+  }
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+}
+
+static void reverse(unsigned* ref, int H, int W)
+{
+  Array live = {
+    .n = 0,
+    .data = alloca(sizeof(unsigned)<<9),
+  };
+  Array dead = {
+    .n = 0,
+    .data = alloca(sizeof(unsigned)<<9),
+  };
+  enum_states(&live, &dead);
+  qsort(live.data, live.n, sizeof(int), cmp_live);
+  qsort(dead.data, dead.n, sizeof(int), cmp_dead);
+  Array A[H*W];
+  for (int i = 0; i < H*W; ++i) {
+    Array* set;
+    if (ref[i]) {
+      set = &live;
+    } else {
+      set = &dead;
+    }
+    A[i].n = set->n;
+    A[i].data = malloc(sizeof(unsigned) * set->n);
+    memcpy(A[i].data, set->data, sizeof(unsigned) * set->n);
+  }
+  for (int r = 0; r < H; ++r) {
+    Array* pA = A + (r*W);
+    int i = 0;
+    while (i < pA->n) {
+      if (pA->data[i] & b_w) {
+        pA->n -= 1;
+        pA->data[i] = pA->data[pA->n];
+      } else {
+        i += 1;
+      }
+    }
+    pA = A + (r*W + W-1);
+    i = 0;
+    while (i < pA->n) {
+      if (pA->data[i] & b_e) {
+        pA->n -= 1;
+        pA->data[i] = pA->data[pA->n];
+      } else {
+        i += 1;
+      }
+    }
+  }
+  for (int c = 0; c < W; ++c) {
+    Array* pA = A + c;
+    int i = 0;
+    while (i < pA->n) {
+      if (pA->data[i] & b_n) {
+        pA->n -= 1;
+        pA->data[i] = pA->data[pA->n];
+      } else {
+        i += 1;
+      }
+    }
+    pA = A + ((H-1)*W + c);
+    i = 0;
+    while (i < pA->n) {
+      if (pA->data[i] & b_s) {
+        pA->n -= 1;
+        pA->data[i] = pA->data[pA->n];
+      } else {
+        i += 1;
+      }
+    }
+  }
+
+  cull(A, H, W);
+
+#if 1
+  for (int r = 0; r < H; ++r) {
+    for (int c = 0; c < W; ++c) {
+      char buf[30];
+      snprintf(buf, sizeof(buf), "%d", A[r*W+c].n);
+      fprintf(stderr, "%3s ", buf);
+    }
+    fprintf(stderr, "\n");
+  }
+#endif
+
+  search(A, H, W);
+
+  for (int i = 0; i < H*W; ++i) {
+    free(A[i].data);
+  }
+}
+
+int main(int argc, char** argv)
+{
+  int H = 0;
+  int W = 0;
+  char temp[1<<10];
+  size_t bufsize = sizeof(temp);
+  Line* head = NULL;
+  Line* tail = NULL;
+  while (1) {
+    char* buf = NULL;
+    size_t t;
+    ssize_t r = getline(&buf, &t, stdin);
+    if (r < 0) {
+      free(buf);
+      break;
+    }
+    Line* line = malloc(sizeof(Line));
+    *line = (Line) {
+      .text = buf,
+      .next = NULL,
+    };
+    if (!head) {
+      head = tail = line;
+    } else {
+      tail->next = line;
+      tail = line;
+    }
+    H += 1;
+  }
+
+  tail = head;
+  while (tail) {
+    char* p = tail->text;
+    tail = tail->next;
+    int linew = 0;
+    while (*p) {
+      if (*p != '\n' && *p != '\r') {
+        linew += 1;
+      }
+      p++;
+    }
+    if (linew > W) W = linew;
+  }
+
+  H += 2;
+  W += 2;
+  size_t boardsz = H * W * sizeof(unsigned);
+  unsigned* start = calloc(H * W, sizeof(unsigned));
+  tail = head;
+  int r = 0;
+  int pop = 0;
+  while (tail) {
+    char* p = tail->text;
+    tail = tail->next;
+    int c = 0;
+    while (*p) {
+      if (*p == '#' || *p == 'O') {
+        start[(r + 1)*W + c + 1] = 1;
+        pop += 1;
+        c += 1;
+      } else if (*p != '\n' && *p != '\r') {
+        c += 1;
+      }
+      p++;
+    }
+    r += 1;
+  }
+
+  if (argc > 1 && !strcmp(argv[1], "sim")) {
+    struct timespec ts = {
+      .tv_sec = 0,
+      .tv_nsec = 300000000,
+    };
+    unsigned* next = malloc(boardsz);
+    memcpy(next, start, boardsz);
+    int step = 0;
+    printf("\033[2J"); // Clear screen.
+    while (1) {
+      printf("\033[Hstep %d\n", step++);
+      disp(start, H, W);
+      fflush(stdout);
+      nanosleep(&ts, NULL);
+
+      sim(start, next, H, W);
+      unsigned* t = start;
+      start = next;
+      next = t;
+    }
+  } else {
+    fprintf(stderr, "Population: %d\n", pop);
+    reverse(start, H, W);
+  }
+
+  free(start);
+  while (head) {
+    tail = head;
+    tail = head->next;
+    free(head->text);
+    free(head);
+    head = tail;
+  }
+  return 0;
+}
+{% endhighlight %}
