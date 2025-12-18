@@ -4,6 +4,12 @@ title: "Renaming Master/Main in Git"
 date: 2024-06-11 23:10:00 +0100
 categories: git
 ---
+TL;DR: Add an alias for the current branch with this Bash one-liner:
+
+{% highlight bash %}
+git symbolic-ref refs/heads/m refs/heads/$(git rev-parse --abbrev-ref HEAD)
+{% endhighlight %}
+
 Git, and many source code hosting websites like GitHub and GitLab, decided
 to change the default branch name from `master` to `main` a few years ago. So
 new repositories have `main` as the mainline branch name and older repositories
@@ -36,7 +42,14 @@ following command:
 git symbolic-ref refs/heads/m refs/heads/main
 {% endhighlight %}
 
-Replace `main` by whatever branch you want to make an alias for.  Now I can do
+Replace `main` by whatever branch you want to make an alias for.  Alternatively, the
+following command adds an alias for the _current branch_
+
+{% highlight bash %}
+git symbolic-ref refs/heads/m refs/heads/$(git rev-parse --abbrev-ref HEAD)
+{% endhighlight %}
+
+I can do
 this once for every repository I am working on and thereafter I can always use
 my own standardized main branch name `m` which is shorter and easier to type
 than both `main` and `master`.
