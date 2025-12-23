@@ -15,8 +15,9 @@
         <a href="/" id="site-title">Low-Level Bits</a>
         </div>
     </header>
-    <main>
-      <div class="column"><h1>Declaration Chains for Name Analysis</h1>
+    <div class="column">
+        <main>
+          <h1>Declaration Chains for Name Analysis</h1>
 <!-- date={2023-09-17} -->
 
 <p>I made a very nice and efficient name analysis system for a compiler that I am
@@ -102,13 +103,10 @@ scope and <code>pop_scope</code> is called when leaving the scope.</p>
 
 <p>During name analysis each non-declaration use of a name is bound to the
 matching declaration chain by doing <code>tbl_lookup(s.names, name)</code> to get the
-current head of the matching name chain.</p></div>
-    </main>
-    <footer>
-    <div class="column">
-    Posted on 2023-09-17<br/>Copyright &copy; Jesper Öqvist
+current head of the matching name chain.</p>
+        </main>
+        <footer>Posted on 2023-09-17<br/>Copyright &copy; Jesper Öqvist</footer>
     </div>
-    </footer>
   </table>
 </body>
 </html>

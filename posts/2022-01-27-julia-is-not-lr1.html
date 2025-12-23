@@ -15,8 +15,9 @@
         <a href="/" id="site-title">Low-Level Bits</a>
         </div>
     </header>
-    <main>
-      <div class="column"><h1>Julia is not LR(1)</h1>
+    <div class="column">
+        <main>
+          <h1>Julia is not LR(1)</h1>
 <!-- date={2022-01-27} -->
 
 <p>The <a href="https://julialang.org/">Julia programming language</a> has a very minimalistic grammar, avoiding
@@ -73,13 +74,10 @@ at a grammar that appears unambiguous with my current test set.  Another way
 of determining if the grammar is unambiguous is to carefully look at all the
 LR(1) conflicts in the grammar and convincing yourself that they will be
 resolved by a GLR parse. This seems infeasible for my grammar as there are
-currently 51 shift/reduce conflicts and 34 reduce/reduce conflicts.</p></div>
-    </main>
-    <footer>
-    <div class="column">
-    Posted on 2022-01-27<br/>Copyright &copy; Jesper Öqvist
+currently 51 shift/reduce conflicts and 34 reduce/reduce conflicts.</p>
+        </main>
+        <footer>Posted on 2022-01-27<br/>Copyright &copy; Jesper Öqvist</footer>
     </div>
-    </footer>
   </table>
 </body>
 </html>

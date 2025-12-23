@@ -15,8 +15,9 @@
         <a href="/" id="site-title">Low-Level Bits</a>
         </div>
     </header>
-    <main>
-      <div class="column"><h1>Julia Oddities</h1>
+    <div class="column">
+        <main>
+          <h1>Julia Oddities</h1>
 <!-- date={2022-10-27} -->
 
 <p><a href="https://julialang.org/">The Julia language</a> is in general very well-designed. However, no
@@ -127,13 +128,10 @@ module refers to itself so the <code>Base.Base.Base.Base</code> part is equivale
 <p>Here is another strange example that works in Julia 1.9.2:</p>
 <div class="codehilite"><pre><span></span><code><span class="n">Main</span><span class="o">.</span><span class="n">Main</span><span class="o">=</span><span class="p">(</span><span class="o">..</span><span class="p">)</span><span class="o">=</span><span class="n">Main</span><span class="o">.</span><span class="n">Main</span>
 <span class="kn">import</span> <span class="nn">...Main....Main...</span>
-</code></pre></div></div>
-    </main>
-    <footer>
-    <div class="column">
-    Posted on 2022-10-27<br/>Copyright &copy; Jesper Öqvist
+</code></pre></div>
+        </main>
+        <footer>Posted on 2022-10-27<br/>Copyright &copy; Jesper Öqvist</footer>
     </div>
-    </footer>
   </table>
 </body>
 </html>

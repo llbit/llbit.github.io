@@ -44,18 +44,14 @@ def main():
         <a href="/" id="site-title">Low-Level Bits</a>
         </div>
     </header>
-    <main>
-      <div class="column">
-      <list class="post-list">
-      {markup}
-      </list>
-      </div>
-    </main>
-    <footer>
     <div class="column">
-    Copyright &copy; Jesper Öqvist
+        <main>
+          <list class="post-list">
+          {markup}
+          </list>
+        </main>
+        <footer>Copyright &copy; Jesper Öqvist</footer>
     </div>
-    </footer>
   </table>
 </body>
 </html>""")
@@ -83,14 +79,12 @@ def main():
         <a href="/" id="site-title">Low-Level Bits</a>
         </div>
     </header>
-    <main>
-      <div class="column">{markup}</div>
-    </main>
-    <footer>
     <div class="column">
-    Posted on {date}<br/>Copyright &copy; Jesper Öqvist
+        <main>
+          {markup}
+        </main>
+        <footer>Posted on {date}<br/>Copyright &copy; Jesper Öqvist</footer>
     </div>
-    </footer>
   </table>
 </body>
 </html>""")

@@ -34,6 +34,7 @@ body{
   margin:0;
   padding:0;
   height:100%;
+  position: relative;
 }
 h1, h2, h3 {
   font-family: 'Roboto',Helvetica,sans-serif;
@@ -72,6 +73,7 @@ header{
   margin-bottom: 2em;
 }
 .column {
+  position: relative;
   max-width: calc(800px - (30px * 2));
   margin-right: auto;
   margin-left: auto;
@@ -104,20 +106,25 @@ header{
   width: 200px;
   background: #E2E5E9;
 }
-#article{
-  padding: 0 2rem 7rem 2rem;
-  vertical-align: top;
-  position: relative;
-}
 main{
   padding-bottom: 1em;
 }
+main::after {
+  content: '';
+  display: block;
+  height: 8em;
+}
 footer{
-  position: relative;
+  font-size: 10pt;
+  position: absolute;
+  bottom: 0;
+  background: #fff;
+  margin-top: 0.5rem;
   padding-top: 0.5rem;
   padding-bottom: 1rem;
   border-top: 2px solid #E9E8E2;
-  font-size: 10pt;
+  height: 2em;
+  width: 80%;
 }
 footer a{
   color: #AFAFAF;

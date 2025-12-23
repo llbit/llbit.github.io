@@ -15,8 +15,9 @@
         <a href="/" id="site-title">Low-Level Bits</a>
         </div>
     </header>
-    <main>
-      <div class="column"><h1>Useful C Macros</h1>
+    <div class="column">
+        <main>
+          <h1>Useful C Macros</h1>
 <!-- date={2025-12-18} -->
 
 <p>I generally try to avoid reaching for macros when I program in C because using them inappropriately
@@ -143,13 +144,10 @@ hash tables, but here is how I would use it in the project where it lives:</p>
 <h2>Addendum: clang-format</h2>
 <p>If you use the for-each style macros like the ones above (<code>FOR_EACH</code> or <code>TBL_ITERATE</code>), you can add the <code>ForEachMacros</code> option to your <code>.clang-format</code> so that you get formatting to look better for these macros:</p>
 <div class="codehilite"><pre><span></span><code>ForEachMacros: [&#39;FOR_EACH&#39;, &#39;TBL_ITERATE&#39;]
-</code></pre></div></div>
-    </main>
-    <footer>
-    <div class="column">
-    Posted on 2025-12-18<br/>Copyright &copy; Jesper Öqvist
+</code></pre></div>
+        </main>
+        <footer>Posted on 2025-12-18<br/>Copyright &copy; Jesper Öqvist</footer>
     </div>
-    </footer>
   </table>
 </body>
 </html>
