@@ -139,3 +139,6 @@ footer a{
 .post-list>li {
   margin-bottom: 1em;
 }
+.codehilite {
+  overflow: scroll;
+}
