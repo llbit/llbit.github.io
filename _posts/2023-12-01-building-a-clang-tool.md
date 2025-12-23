@@ -1,9 +1,6 @@
----
-layout: post
-title: "Building a Standalone Clang Tool"
-date: 2023-12-01 20:00:00 +0100
-categories: programming
----
+# Building a Standalone Clang Tool
+<!-- date={2023-12-01} -->
+
 I wrote a small Clang-based tool to analyze C code to find potentially
 problematic assign-through pointer expressions.
 The assignments I want to find look like this: `PTR(x)->y = z` where
@@ -24,13 +21,13 @@ occur in the normal x86-based test environment).
 Finding these kinds of expressions with Clang is pretty easy. Clang has an API
 for AST matching that [allows us to write matchers such as this:](AstMatcher Tutorial)
 
-{% highlight c++ %}
+```c++
 auto AssignMatcher = binaryOperator(
     hasOperatorName("="),
     hasLHS(memberExpr(hasObjectExpression(stmt(isExpandedFromMacro("PTR"))))),
     hasRHS(findAll(callExpr()))
   );
-{% endhighlight %}
+```
 
 This matcher finds all expressions as described above where the right-hand side
 additionally contains a function call.
@@ -95,25 +92,25 @@ g++ -g `llvm-config-15 --ldflags` -o tool tool.o \
 
 The [LibTooling](LibTooling) page contains an outdated example code snippet:
 
-{% highlight c++ %}
+```c++
 int main(int argc, const char **argv) {
   CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
   ClangTool Tool(OptionsParser.getCompilations(),
                  OptionsParser.getSourcePathList());
   return Tool.run(newFrontendActionFactory<clang::SyntaxOnlyAction>().get());
 }
-{% endhighlight %}
+```
 
 The `CommonOptionsParser` class should not be instantiated directly. It has
 been made protected in some previous version of LLVM.  Instead the builder
 function `::create` should be called:
 
-{% highlight c++ %}
+```c++
 int main(int argc, const char **argv) {
   auto Options = CommonOptionsParser::create(argc, argv, PtrAssCategory);
   ClangTool Tool(Options->getCompilations(), Options->getSourcePathList());
 }
-{% endhighlight %}
+```
 
 ## Putting it all Together
 
@@ -123,7 +120,7 @@ against LLVM 15.0.7 and may not work with other versions.
 I've made some improvements to the tool which are not included but it should
 work as a starting point if you are looking to make a similar Clang tool.
 
-{% highlight c++ %}
+```c++
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -181,7 +178,7 @@ int main(int argc, const char **argv) {
 
   return Tool.run(newFrontendActionFactory(&Finder).get());
 }
-{% endhighlight %}
+```
 
 
 [LibTooling]: https://clang.llvm.org/docs/LibTooling.html

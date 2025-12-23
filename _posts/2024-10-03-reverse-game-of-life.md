@@ -1,10 +1,7 @@
----
-layout: post
-title: "Reversing Conway's Game of Life"
-date: 2024-10-03 19:00:00 +0100
-categories: programming, julia
-life_viewer: true
----
+# Reversing Conway's Game of Life
+<!-- date={2024-10-03} -->
+<!-- life-viewer -->
+
 A few days ago the YouTube channel [Alpha Phoenix uploaded a
 video about running Conway's Game of Life backwards.](https://youtu.be/g8pjrVbdafY?feature=shared) It's a great video,
 but the solution Alpha Phoenix used was based on using a constraint solver and
@@ -39,7 +36,7 @@ If my code is correct the 3rd iteration shown above is [a so-called Garden of Ed
 ## Julia Code
 Anyway here is my Julia code if you want to try it for yourself:
 
-{% highlight julia %}
+```jl
 b_north = 1<<0 + 1<<1 + 1<<2
 b_south = 1<<6 + 1<<7 + 1<<8
 b_ew = 1<<3 + 1<<4 + 1<<5  # line east-west
@@ -294,7 +291,7 @@ end
 
 filename = "big_reverse.txt"
 @time reverse(filename)
-{% endhighlight %}
+```
 
 This script expects a file named `big_reverse.txt` in the working directory containing a text representation of a Game of Life board where `#` denotes a living cell (all other non-newline characters are treated as dead). For example:
 
@@ -313,7 +310,7 @@ This script expects a file named `big_reverse.txt` in the working directory cont
 
 [Here is my C implementation:](https://gist.github.com/llbit/c3d9604383696aefcfdd84f7487e7783)
 
-{% highlight c %}
+```c
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -843,4 +840,4 @@ int main(int argc, char** argv)
   }
   return 0;
 }
-{% endhighlight %}
+```

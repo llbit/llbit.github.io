@@ -1,9 +1,6 @@
----
-layout: post
-title: "Git Metrics Tool"
-date: 2018-12-19 15:26:00 +0100
-categories: programming, python, git
----
+# Git Metrics Tool
+<!-- date={2018-12-19} -->
+
 I wrote a small Python program to extract Git commit metrics for a table in my thesis. There
 were some alternative tools available, but none of them gave exactly the output I was looking for.
 Instead of converting the output from another tool it seemed easy enough to roll my own solution,

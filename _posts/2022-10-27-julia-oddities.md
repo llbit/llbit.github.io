@@ -1,9 +1,6 @@
----
-layout: post
-title: "Julia Oddities"
-date: 2022-10-27 17:00:00 +0100
-categories: programming, julia
----
+# Julia Oddities
+<!-- date={2022-10-27} -->
+
 [The Julia language][julia] is in general very well-designed. However, no
 programming language is perfect and there are some rough edges or unexpected
 behaviors even in Julia.
@@ -31,10 +28,10 @@ use the standard `string()` function like so: `string("a", "b", "c")`.
 If you still want to use `+` to concatenate strings you can overload the
 `+` operator:
 
-{% highlight julia %}
+```jl
 +(s1::AbstractString, ss::AbstractString...) = string(s1, ss...)
 "much" + " better"
-{% endhighlight %}
+```
 
 ## Default Arguments
 
@@ -42,10 +39,10 @@ Julia allows an argument to have a default value, but the type of the default
 value is not statically checked. Therefore it is possible to declare a default
 argument value that does not match the type of the argument, for example:
 
-{% highlight julia %}
+```jl
 foo(::Int = "3.1415") = println("foo(::Int)")
 foo()
-{% endhighlight %}
+```
 
 Here, the call to `foo()` results in the default argument expression `"3.1415"`
 being evaluated and passed to `foo(::Int)` but that does not work as the
@@ -55,13 +52,13 @@ expression does not match the argument type. Instead, we get the error
 Even more confusingly, if we add another function with the same name that accepts a `String`
 argument then that other function is called instead of our original function.
 
-{% highlight julia %}
+```jl
 foo(::String)         = println("foo(::String)")
 foo(::Int = "3.1415") = println("foo(::Int)")
 
 foo()
 foo(101)
-{% endhighlight %}
+```
 
 This code outputs:
 
@@ -78,13 +75,13 @@ This has been a
 If you are familiar with polymorphic functions in Julia, you might expect the following
 functions to be equivalent:
 
-{% highlight julia %}
+```jl
 f(x::T)::Int64 where T = 1
 
 function f(x::T)::Int64 where T
   return 1
 end
-{% endhighlight %}
+```
 
 The first version of `f()` is written in assignment form, which is usually equivalent to
 the longer non-assignment form function-declaration style.

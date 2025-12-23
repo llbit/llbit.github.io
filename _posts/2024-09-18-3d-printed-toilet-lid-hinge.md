@@ -1,9 +1,6 @@
----
-layout: post
-title: "Fixing my Toilet with 3D Printing"
-date: 2024-09-22 20:00:00 +0100
-categories: "3d printing"
----
+# Fixing my Toilet with 3D Printing
+<!-- date={2024-09-22} -->
+
 A small plastic pin inside the hinge on the seat of my toilet broke. I figured I could print a replacement part with my 3D printer,
 so I measured the original part and modeled it in FreeCAD. The first iteration looked like this:
 

@@ -1,9 +1,6 @@
----
-layout: post
-title: "Declaration Chains for Name Analysis"
-date: 2023-09-17 09:08:00 +0100
-categories: programming
----
+# Declaration Chains for Name Analysis
+<!-- date={2023-09-17} -->
+
 I made a very nice and efficient name analysis system for a compiler that I am
 working on.  I have not seen this method of doing name analysis before so I
 will try to describe how it works in this post. It is possible that this is a
@@ -25,12 +22,12 @@ In my case the AST nodes are objects of `struct AstNode`. This contains
 declaration chains as [intrusive singly linked lists](intrusive lists) with a
 pointer pointing to the previous declaration:
 
-{% highlight c %}
+```c
 struct AstNode {
   ...
   AstNode* prev_decl; // Previous declaration with same name.
 };
-{% endhighlight %}
+```
 
 ![prev_decl pointers illustrated in a simple program](/assets/prev_decl.png)
 
@@ -46,7 +43,7 @@ the declaration stack.
 
 The data for name analysis is stored like this:
 
-{% highlight c %}
+```c
 struct State {
   HashTable* names; // Current head of each name chain.
 
@@ -58,7 +55,7 @@ struct State {
   int* scope;
   int scope_last; // Initially 0.
 };
-{% endhighlight %}
+```
 
 In reality the stacks use their own data structures that can grow dynamically but I've simplified
 it to fixed-sized arrays here for simplicity.
@@ -72,7 +69,7 @@ function is called once for each declaration node during the AST name analysis
 traversal. The `push_scope` function is called whenever we enter a new name
 scope and `pop_scope` is called when leaving the scope.
 
-{% highlight c %}
+```c
 /** Get the name of a declaration. */
 const char* ast_decl_name(const AstNode* decl);
 
@@ -98,7 +95,7 @@ void pop_scope(State s)
   }
   s.scope_last -= 1;
 }
-{% endhighlight %}
+```
 
 During name analysis each non-declaration use of a name is bound to the
 matching declaration chain by doing `tbl_lookup(s.names, name)` to get the

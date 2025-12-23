@@ -1,9 +1,6 @@
----
-layout: post
-title: "Filename Fuck-ups"
-date: 2023-08-26 13:19:00 +0100
-categories: programming
----
+# Filename Fuck-ups
+<!-- date={2023-08-26} -->
+
 I recently made a git branch with the slightly creative branch name
 `((x.y).z).w` and pushed it to my team's GitLab server.  Normally the branches
 on the server are named with only underscore or dash to separate parts of the
@@ -14,12 +11,12 @@ our GitLab continuous integration builds failing on Windows for all branches.
 
 The failing Windows builds had the following in their logs:
 
-{% highlight any %}
+```
 Fetching changes...
 Initialized empty Git repository in C:/GitLab-Runner/builds/SZUExwvh/0/nextgen/language/.git/
 Created fresh repository.
 error: cannot lock ref 'refs/remotes/origin/global->initfunctions': Unable to create 'C:/GitLab-Runner/builds/SZUExwvh/0/nextgen/language/.git/refs/remotes/origin/global->initfunctions.lock': Invalid argument
-{% endhighlight %}
+```
 
 Even if a build job was not trying to check out the `global->initfunctions`
 branch, it still apparently needed to create a `.lock` file for the branch in the git

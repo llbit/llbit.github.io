@@ -1,9 +1,6 @@
----
-layout: post
-title: "Comparing Collections"
-date: 2014-03-14 20:23:00 +0100
-categories: programming, algorithms
----
+# Comparing Collections
+<!-- date={2014-03-14} -->
+
 In a project I'm currently working on I had to compare two [Java
 Collections][1] to see if they contained the same elements, ignoring element
 order. The usual place for such general Collection-related library functions is

@@ -1,9 +1,6 @@
----
-layout: post
-title: "Useful C Macros"
-date: 2025-12-18 08:00:00 +0100
-categories: programming
----
+# Useful C Macros
+<!-- date={2025-12-18} -->
+
 I generally try to avoid reaching for macros when I program in C because using them inappropriately
 can lead to unreadable code which does seemingly unpredictable things and is painful to debug
 (e.g., stepping through macros in a debugger).
@@ -16,42 +13,42 @@ like iterating over data structures and printing error messages.
 ## Circular List Iteration
 Say that we have a circular linked list structure defined like this:
 
-{% highlight c %}
+```c
 typedef struct List List;
 struct List {
   List* next;
   void* data;
 };
-{% endhighlight %}
+```
 
 Here is a macro to iterate over the elements of such a list:
 
-{% highlight c %}
+```c
 #define FOR_EACH(p, list) for (        \
     List* p = NULL, *next__##p = list; \
     p != list && (p = next__##p);      \
     p = next__##p = p->next)
-{% endhighlight %}
+```
 
 The macro is used like this, for example:
 
-{% highlight c %}
+```c
 FOR_EACH(p, my_list) {
   process_data(p->data);
 }
-{% endhighlight %}
+```
 
 ## Locking/Unlocking Mutexes
 This macro helps creating critical sections by taking and holding a lock while the statements inside the block following the macro call are executed:
 
-{% highlight c %}
+```c
 #define WITH_LOCK(lock) for(int xk=1; xk && !pthread_mutex_lock(&lock); \
     (pthread_mutex_unlock(&lock)), xk=0)
-{% endhighlight %}
+```
 
 For example:
 
-{% highlight c %}
+```c
 pthread_mutex_t sched_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // ...
@@ -63,24 +60,24 @@ pthread_mutex_t sched_lock = PTHREAD_MUTEX_INITIALIZER;
       task_wait_on(vm_current_task(), task);
     }
   }
-{% endhighlight %}
+```
 
 Note that the macro relies on normal control flow exiting the block, so that the for-loop increment
 statement can unlock the mutex.
 In other words, you cannot use `return`, `break`, or `continue` inside the block.
 
-{% highlight c %}
+```c
   WITH_LOCK(sched_lock) {
     break; // DANGER! mutex is left locked
   }
-{% endhighlight %}
+```
 
 ## Error Reporting
 Since C99 it is possible to use variable argument macros. This can be combined with a helper function to
 include extra information in error messages. Below is a simplified example of how this might be used,
 adding the function name in the error message.
 
-{% highlight c %}
+```c
 #include <stdarg.h>
 
 #define FFI_ERROR(...) ffi_error(__func__, __VA_ARGS__)
@@ -94,18 +91,18 @@ static void ffi_error(const char* func, const char* format, ...)
   vprintf(format, argp);
   va_end(argp);
 }
-{% endhighlight %}
+```
 
 The macro is used like this:
 
-{% highlight c %}
+```c
 void copy_to_buffer(int len, void* data)
 {
   if ((size_t) len + 1 > sizeof(strbuf)) {
     FFI_ERROR("length %d is too large for temporary buffer\n", len);
   }
 }
-{% endhighlight %}
+```
 
 The `__func__` macro expands to the function name where the macro is used, so the error message
 looks like this:
@@ -120,7 +117,7 @@ for `printf` argument errors.
 ## Hash Table Iteration
 In one project I am working on I wrote the following macro for iterating over a hash table:
 
-{% highlight c %}
+```c
 /** An iterator for a hash table. */
 typedef struct {
   uint32_t i;       // Current bucket index.
@@ -135,19 +132,19 @@ typedef struct {
       .key = (tbl)->buckets[it.i].key,              \
       .value = (tbl)->buckets[it.i].value }, true); \
     it.i += 1) if (!(tbl)->buckets[it.i].flag)
-{% endhighlight %}
+```
 
 This is very specific to one hash table implementation so it might not be easy to adapt to other
 hash tables, but here is how I would use it in the project where it lives:
 
-{% highlight c %}
+```c
   HashTable* tbl = new_hashtable();
   tbl_insert(tbl, "name", ast_call(...));
   TBL_ITERATE(it, tbl) {
     const char* name = (const char*) it.key;
     AstNode* node = (AstNode*) it.value;
   }
-{% endhighlight %}
+```
 
 ## Addendum: clang-format
 If you use the for-each style macros like the ones above (`FOR_EACH` or `TBL_ITERATE`), you can add the `ForEachMacros` option to your `.clang-format` so that you get formatting to look better for these macros:

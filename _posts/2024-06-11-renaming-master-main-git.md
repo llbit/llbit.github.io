@@ -1,14 +1,11 @@
----
-layout: post
-title: "Renaming Master/Main in Git"
-date: 2024-06-11 23:10:00 +0100
-categories: git
----
+# Renaming Master/Main in Git
+<!-- date={2024-06-11} -->
+
 TL;DR: Add an alias for the current branch with this Bash one-liner:
 
-{% highlight bash %}
+```bash
 git symbolic-ref refs/heads/m refs/heads/$(git rev-parse --abbrev-ref HEAD)
-{% endhighlight %}
+```
 
 Git, and many source code hosting websites like GitHub and GitLab, decided
 to change the default branch name from `master` to `main` a few years ago. So
@@ -38,16 +35,16 @@ another, so my solution is to just make a symbolic reference `m` pointing to
 either `main` or `master` depending on the repository. This is done with the
 following command:
 
-{% highlight bash %}
+```bash
 git symbolic-ref refs/heads/m refs/heads/main
-{% endhighlight %}
+```
 
 Replace `main` by whatever branch you want to make an alias for.  Alternatively, the
 following command adds an alias for the _current branch_
 
-{% highlight bash %}
+```bash
 git symbolic-ref refs/heads/m refs/heads/$(git rev-parse --abbrev-ref HEAD)
-{% endhighlight %}
+```
 
 I can do
 this once for every repository I am working on and thereafter I can always use
@@ -56,12 +53,12 @@ than both `main` and `master`.
 
 For example
 
-{% highlight bash %}
+```bash
 git checkout feature-branch
 git diff m
 git merge m
 git checkout m
-{% endhighlight %}
+```
 
 The one caveat to this is that the default merge commit message will mention
 the branch name `m` although you might want to use the actual branch name.
@@ -69,10 +66,10 @@ the branch name `m` although you might want to use the actual branch name.
 As a side note I highly recommend creating aliases for your most used git
 commands. For example
 
-{% highlight bash %}
+```bash
 git config --global alias.co checkout
 git config --global alias.d diff
-{% endhighlight %}
+```
 
 I even have a Bash alias `g` for `git` so that I can type `g co m` instead
 of `git checkout master`.

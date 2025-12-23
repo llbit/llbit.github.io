@@ -1,9 +1,6 @@
----
-layout: post
-title: "Multiplying Polynomials with Fast Fourier Transform"
-date: 2018-07-28 11:12:00 +0100
-categories: programming, julia
----
+# Multiplying Polynomials with Fast Fourier Transform
+<!-- date={2018-07-28} -->
+
 I recently learned a very strange way of multiplying polynomials.
 
 The straightforward way of multiplying two polynomials of degree n takes O(n^2) time: multiply each term from one polynomial with each term from the other.

@@ -1,20 +1,17 @@
----
-layout: post
-title: "Julia is not LR(1)"
-date: 2022-01-27 17:00:00 +0100
-categories: programming, parsing, julia
----
+# Julia is not LR(1)
+<!-- date={2022-01-27} -->
+
 The [Julia programming language][julia] has a very minimalistic grammar, avoiding
 many keywords or syntax elements that are common in other languages such as
 braces and semicolons.  For example, here is a small piece of Julia code:
 
-{% highlight julia %}
+```jl
 function hello(x)
   if x
     print(x)
   end
 end
-{% endhighlight %}
+```
 
 At a glance, Julia code looks similar to [Python][python]. The most notable differences
 are that that Julia requires `end` after each block of code and does not have

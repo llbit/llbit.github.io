@@ -1,9 +1,6 @@
----
-layout: post
-title: "Git push confirmations for protected branches with a pre-push hook"
-date: 2024-09-19 10:55:00 +0100
-categories: programming, git
----
+# Git push confirmations for protected branches with a pre-push hook
+<!-- date={2024-09-19} -->
+
 Pre-push hooks can be used to do various checks on your local Git work before
 pushing to ensure that you are not unintentionally pushing incomplete commits
 to a shared or public repository. For example, Git includes a sample pre-push
@@ -14,7 +11,7 @@ I recently accidentally pushed to a `master` branch in a work repository which
 I had not intended to and decided to make a pre-push hook to confirm this for
 the future:
 
-{% highlight bash %}
+```bash
 #!/bin/bash
 
 protected_branch='master'
@@ -29,7 +26,7 @@ then
 else
     exit 0 # push will execute
 fi
-{% endhighlight %}
+```
 
 This Bash script needs to be placed in a file named `repo/.git/hooks/pre-push`.
 The file must be executable (`chmod u+x pre-push`).  This script isn't perfect:

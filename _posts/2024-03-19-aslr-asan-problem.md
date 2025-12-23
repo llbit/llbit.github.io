@@ -1,9 +1,6 @@
----
-layout: post
-title: "Linux ASLR update crashes AddressSanitizer"
-date: 2024-03-19 14:40:00 +0100
-categories: programming
----
+# Linux ASLR update crashes AddressSanitizer
+<!-- date={2024-03-19} -->
+
 I had some C code randomly start crashing on my Ubuntu laptop yesterday.
 The code was previously working fine but it started crashing with AddressSanitizer
 infinitely printing `AddressSanitizer:DEADLYSIGNAL` in the console.
@@ -18,9 +15,9 @@ I had soon removed all of the code in the program and ended up with just an
 empty `main` function.  In fact at this point I could reliably reproduce the
 error by running this one-liner in the terminal:
 
-{% highlight bash %}
+```bash
 echo "int main() {}" | gcc -fsanitize=address -xc - && for i in {1..100}; do ./a.out; done
-{% endhighlight %}
+```
 
 The for-loop made the crash reliably appear at least once every time the command was
 run.
@@ -54,9 +51,9 @@ very likely that this will be fixed soon.
 At the moment I am using the following workaround to temporarily set the ASLR
 bit count back to 28:
 
-{% highlight bash %}
+```bash
 sudo sysctl -w vm.mmap_rnd_bits=28
-{% endhighlight %}
+```
 
 This change is reset on reboot but I seldom do reboot so I'll live with
 this until the LLVM packages are updated by Ubuntu to adjust for the ASLR
