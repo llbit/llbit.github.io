@@ -11,7 +11,7 @@ So I wrote a backtracking search solution in Julia. It runs pretty quickly on sm
 Here is an example of one of my test cases:
 
 <div class="viewer">
-<textarea style="display:none">#C [[ GRID COLOR GRID 192 192 192 GRIDMAJOR 10 COLOR GRIDMAJOR 128 128 128 COLOR DEADRAMP 255 220 192 COLOR ALIVE 0 0 0 COLOR ALIVERAMP 0 0 0 COLOR DEAD 192 220 255 COLOR BACKGROUND 255 255 255 WIDTH 937 HEIGHT 600 AUTOSTART GPS 1 LOOP 6 ]]
+<textarea style="display:none">#C [[ GRID COLOR GRID 192 192 192 GRIDMAJOR 10 COLOR GRIDMAJOR 128 128 128 COLOR DEADRAMP 16 16 16 COLOR ALIVE 145 32 32 COLOR ALIVERAMP 16 16 16 COLOR DEAD 16 16 16 COLOR BACKGROUND 16 16 16 WIDTH 937 HEIGHT 600 AUTOSTART GPS 1 LOOP 6 ]]
 x = 0, y = 0, rule = B3/S23
 18b$bo3bo3bo8b$3bo4bo2bob2obob$2b2obobo2b3o5b$bobo4bo2bobobo2b$3b2ob3o4bobo2b$2b2o7bo2bo3b$2b3obo4bob2obob$5b2ob4o3bo2b$2b3o4bo2b2ob2ob$3b2o6bo3b2ob$2b4ob2o2bobobo2b$3bobob4o2bobo2b$3bo4bo9b$bo3bobo3bobobo2b$18b$!
 </textarea><br/>
@@ -21,7 +21,7 @@ x = 0, y = 0, rule = B3/S23
 The largest test I did so far was a rasterization of the text `REVERSE`. My implementation only managed to run it 3 steps backwards and got stuck on the 4th step:
 
 <div class="viewer">
-<textarea style="display:none">#C [[ ZOOM 16 GRID COLOR GRID 192 192 192 GRIDMAJOR 10 COLOR GRIDMAJOR 128 128 128 COLOR DEADRAMP 255 220 192 COLOR ALIVE 0 0 0 COLOR ALIVERAMP 0 0 0 COLOR DEAD 192 220 255 COLOR BACKGROUND 255 255 255 WIDTH 937 HEIGHT 600 AUTOSTART GPS 1 LOOP 4 ]]
+<textarea style="display:none">#C [[ GRID COLOR GRID 192 192 192 GRIDMAJOR 10 COLOR GRIDMAJOR 128 128 128 COLOR DEADRAMP 16 16 16 COLOR ALIVE 145 32 32 COLOR ALIVERAMP 16 16 16 COLOR DEAD 16 16 16 COLOR BACKGROUND 16 16 16 WIDTH 937 HEIGHT 600 AUTOSTART GPS 1 LOOP 6 ]]
 x = 0, y = 0, rule = B3/S23
 56b$2bobobo8b2obobo3b3o6bo4bo3b2obo10b$2bobobo6b5o4b7ob2o3b2o9bob2ob2o3b$3bo4bobo2bobob2obo3bo3b2o3bo2b2obobob2obob3o2bo2b$bob2obobo2b3o2bobobo6b2obob2o7bob2o4bobo4b$3bo5b2o2bo11bobo2bob2o4bo5bo3b2ob3o2b$2b3o5bo3bo2bo4b3ob2obobob3ob2ob3o2b2o5bo3b$3bo3bobobob7o4b2o10b4ob2o3bobo4bo2b$4bo6b2o2bo2bob2o3bo5b3o9bo3bo2b4o2b$bo3bobo3b2o6bo5bo2bobob3ob2ob2obob2obo2bob3ob$bobo2b3o5bobob5ob2ob2o2b3o2b2ob2obob5o3b3ob$7b2o7bob2o9bobo8bo7b2o3bo2b$4b2o4b2o9bob2obo2bobo2bobobo2bob2o9bob$56b$!
 </textarea><br/>
