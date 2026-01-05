@@ -30,8 +30,26 @@ x = 0, y = 0, rule = B3/S23
 
 The problem with my solutions is that they grow in size, each predecessor state requires searching over more pixels which slows down the search a lot. For the `REVERSE` example the 3rd step took 15 seconds but the 4th step did not complete: I stopped it after more than 4 hours.
 
-Update: I rewrote and optimized my search function and finally the 4th iteration of the `REVERSE` example finished without a solution after 15 hours.
-If my code is correct the 3rd iteration shown above is [a so-called Garden of Eden](https://conwaylife.com/wiki/Garden_of_Eden), that is, a game state which has no predecessors.
+## Implementation
+
+My idea for a backtracking search was to first enumerate all possible 3x3 tiles
+and group them as either "living predecessor" or "dead predecessor" depending
+on whether or not the center cell would be living or dead in the next step of a
+GoL simulation on the 3x3 tile. After all 3x3 tiles have been categorized we can
+iterate over the input cells and choose one of the 3x3 tiles from the category matching the
+state of the cell, discarding tiles that do not fit with previously selected tiles.
+
+The search can be accellerated by using bitsets to represent the 3x3 tiles.
+
+## Optimizations
+
+I rewrote and optimized my search function so that I was able to find more predecessor generations for the `REVERSE` example above.
+However I again ran into a road block when the search for one generation finished without a solution after 15 hours.
+If my code was correct I had found [a so-called Garden of Eden](https://conwaylife.com/wiki/Garden_of_Eden), that is, a game state which has no predecessors.
+
+However, I later discovered that I had an error in my code for culling
+impossible tile combinations which made the search incomplete. That is,
+it gave false positive results for Garden of Eden states.
 
 ## Julia Code
 Anyway here is my Julia code if you want to try it for yourself: [life.jl](https://gist.github.com/llbit/540cec80e69809638774f78652abcaaf)
