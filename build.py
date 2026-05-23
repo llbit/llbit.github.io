@@ -40,8 +40,8 @@ def main():
 <link href="/assets/style.css" rel="stylesheet" type="text/css">
 <link href="/assets/highlight.css" rel="stylesheet" type="text/css">
 </head>
-<a name="top"></a>
 <body>
+    <a name="top"></a>
     <header id="header">
         <div class="column">
         <a href="/" id="site-title">Low-Level Bits</a>
@@ -55,7 +55,6 @@ def main():
         </main>
         <footer>Copyright &copy; Jesper Öqvist</footer>
     </div>
-  </table>
 </body>
 </html>""")
     for fn, title, date, markup, lifeview in posts:
@@ -75,8 +74,8 @@ def main():
 <link href="/assets/highlight.css" rel="stylesheet" type="text/css">
 {extra}
 </head>
-<a name="top"></a>
 <body>
+    <a name="top"></a>
     <header id="header">
         <div class="column">
         <a href="/" id="site-title">Low-Level Bits</a>

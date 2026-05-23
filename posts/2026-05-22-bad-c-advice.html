@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bad C Coding Advice</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16" type="image/vnd.microsoft.icon">
+<link href="/assets/style.css" rel="stylesheet" type="text/css">
+<link href="/assets/highlight.css" rel="stylesheet" type="text/css">
+
+</head>
+<body>
+    <a name="top"></a>
+    <header id="header">
+        <div class="column">
+        <a href="/" id="site-title">Low-Level Bits</a>
+        </div>
+    </header>
+    <div class="column">
+        <main>
+          <h1>Bad C Coding Advice</h1>
+<!-- date={2026-05-22} -->
+
+<p>C compilers can be annoying when they constantly complain and refuse to compile
+your program. Here are some tips for suppressing those tedious
+warnings and getting C code to compile even when the compiler fights against you!</p>
+<h2>Disable -Wall -pedantic</h2>
+<p>It goes without saying, never compile with <code>-Wall</code> or <code>-pedantic</code>. These
+command-line options will make your life miserable.</p>
+<p>If the code compiles and runs it is obviously not your fault if something breaks at
+runtime - that is the user's problem.</p>
+<h2>Semicolon After Every Label</h2>
+<p>Although C has the best control flow instruction of all time, the powerful <code>goto</code> statement, the C implementation
+is unfortunately flawed. Well, there is nothing really wrong with <code>goto</code> per se, but rather the way C compilers handle
+labels:</p>
+<ol>
+<li>The target label of a <code>goto</code> must be inside the same function as the <code>goto</code>.</li>
+<li>There are a bunch of restrictions on where inside the function we can place the target label.</li>
+</ol>
+<p>The first restriction can be solved by using <code>longjmp</code> instead of <code>goto</code>.
+Perfectly valid solution, but we will leave this as an exercise for the reader.</p>
+<p>The second restriction is easily fixed with semicolons.
+For example, the following is not allowed:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">goto</span><span class="w"> </span><span class="n">done</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="nl">done</span><span class="p">:</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+</code></pre></div>
+
+<p>We can fix this case by simply appending a semicolon after the label:</p>
+<div class="codehilite"><pre><span></span><code><span class="nl">done</span><span class="p">:;</span>
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+<span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+</code></pre></div>
+
+<p>It turns out that the C standard incorrectly allows a label without a trailing semicolon.
+To be safe, you should always append a semicolon after your labels.</p>
+<h2>Always Cast Struct Pointers to void*</h2>
+<p>Let's say we have this simple C function:</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="n">baba</span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">;</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="p">;</span><span class="w"> </span><span class="p">}</span><span class="o">*</span><span class="w"> </span><span class="n">point</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;x=%d, y=%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">point</span><span class="o">-&gt;</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">point</span><span class="o">-&gt;</span><span class="n">y</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Calling this function is kind of cumbersome if we try to pass it a struct, because
+the struct declared in the parameter is only visible inside the function (this is intentional
+hiding of implementation details which is good software architecture).</p>
+<p>For example, the following call is not allowed:</p>
+<div class="codehilite"><pre><span></span><code><span class="w">  </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">;</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="n">point</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mi">123</span><span class="p">,</span><span class="w"> </span><span class="mi">44</span><span class="w"> </span><span class="p">};</span>
+<span class="w">  </span><span class="n">baba</span><span class="p">(</span><span class="o">&amp;</span><span class="n">point</span><span class="p">);</span>
+</code></pre></div>
+
+<p>The fix is to simply cast the <code>&amp;point</code> pointer to <code>void*</code>:</p>
+<div class="codehilite"><pre><span></span><code><span class="w">  </span><span class="n">baba</span><span class="p">((</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">point</span><span class="p">);</span>
+</code></pre></div>
+
+<p>Casting to <code>void*</code> in C is recommended because the C specification explicitly
+allows converting <code>void*</code> to any other pointer-type. This means that if we
+have a pointer to some struct <code>A</code>, we can cast it to <code>void*</code>, then it can be
+assigned to a pointer to any struct other than <code>A</code> without having the compiler
+annoyingly second-guessing our code.  Neat!</p>
+<h2>Use Macros for Everything</h2>
+<p>As you might have noticed in the previous example, we had to type extra characters to do the
+<code>void*</code> cast. Also, if we were to type this for every call we would be repeating ourselves and
+according to the <a href="https://en.wikipedia.org/wiki/Don%27t_repeat_yourself">DRY</a> design principle
+we should avoid such meaningless repetition.</p>
+<p>This is an excellent example of when to use macros to abstract away implementation details and
+reduce repetition. We can define a macro to perform the address-of operation and <code>void*</code> cast for us.
+For example:</p>
+<div class="codehilite"><pre><span></span><code><span class="cp">#define PASS(x) ((void*)&amp;(x))</span>
+
+<span class="c1">// ...</span>
+
+<span class="w">  </span><span class="n">baba</span><span class="p">(</span><span class="n">PASS</span><span class="p">(</span><span class="n">point</span><span class="p">));</span>
+</code></pre></div>
+
+<p>You might have noticed that the two structs in the function and variable definitions are repeated.
+So we should remove the duplicated code and abstract these with a macro as well. Here is our final code:</p>
+<div class="codehilite"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#define PASS(x) ((void*)&amp;(x))</span>
+<span class="cp">#define STRUCT_POINT struct { int x; int y; }</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">baba</span><span class="p">(</span><span class="n">STRUCT_POINT</span><span class="o">*</span><span class="w"> </span><span class="n">point</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;x=%d, y=%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">point</span><span class="o">-&gt;</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">point</span><span class="o">-&gt;</span><span class="n">y</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="n">STRUCT_POINT</span><span class="w"> </span><span class="n">point</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mi">123</span><span class="p">,</span><span class="w"> </span><span class="mi">44</span><span class="w"> </span><span class="p">};</span>
+<span class="w">  </span><span class="n">baba</span><span class="p">(</span><span class="n">PASS</span><span class="p">(</span><span class="n">point</span><span class="p">));</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Much better!</p>
+<h2>Conclusion</h2>
+<p>C is the greatest programming language of all time. You will have the greatest
+of all your time programming in C.</p>
+        </main>
+        <footer>Posted on 2026-05-22<br/>Copyright &copy; Jesper Öqvist</footer>
+    </div>
+  </table>
+</body>
+</html>
