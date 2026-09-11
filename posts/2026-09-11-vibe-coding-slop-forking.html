@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lessons from Vibe Coding and Slop Forking</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16" type="image/vnd.microsoft.icon">
+<link href="/assets/style.css" rel="stylesheet" type="text/css">
+<link href="/assets/highlight.css" rel="stylesheet" type="text/css">
+
+</head>
+<body>
+    <a name="top"></a>
+    <header id="header">
+        <div class="column">
+        <a href="/" id="site-title">Low-Level Bits</a>
+        </div>
+    </header>
+    <div class="column">
+        <main>
+          <h1>Lessons from Vibe Coding and Slop Forking</h1>
+<!-- date={2026-09-11} -->
+
+<p>I was pretty slow at trying out AI coding tools. I only really started
+experimenting with them in May 2026, but now I have some experience with them
+and formed some opinions.</p>
+<p>Initially I just used AI for code reviews which gave me surprisingly useful results.
+Then I tried some vibe coding, i.e. just prompting an AI to
+develop some code with little or no manual intervention/review. This also produced
+surprises but not always positive ones.</p>
+<h2>Slop-forking a TUI</h2>
+<p>One of my vibe coding success stories is improving an existing TUI frontend for GitLab.
+I found a tool called <a href="https://github.com/rcieri/glab-tui">glab-tui</a> which was already
+a seemingly 100% vibe coded slop-fest. I slop-forked this and piled on my own
+vibe coded changes.</p>
+<p>The original <code>glab-tui</code> project had lots of UX design problems
+and baffling choices that I wanted to change.</p>
+<p>The code was written in Rust. Compiling took almost a minute and pulled down over 140
+dependencies. I took a brief look at the code and was immediately discouraged from trying
+to do any manual changes, but with LLM assistance I deleted
+the GitHub backend and removed a bunch of pointless features. This saved about 15k lines
+of code and cut down the compile time significantly.</p>
+<p>After some vibe coding sessions the tool was actually pretty useful for me. I could view and comment
+on issues/merge requests via the TUI. It was much faster than the GitLab webpage.
+However, I could only search the latest 20 or so issues/merge requests because the TUI
+only polled the GitLab API for the latest items.</p>
+<p>I wanted to be able to search through all issues at any time, so
+I prompted an LLM to implement a backing SQLite database. The LLM implemented
+the feature and it seemed to work - the database was populated by a
+background task that scanned through older issues and merge requests and after
+that initial background scraping was done I could search through all issues
+from a cold start pretty much instantly, just like I wanted!</p>
+<p>I decided to check how the LLM set up the SQLite database and found out that
+there was one single row per project and all the issue/merge request data was
+packed in a single JSON blob for each. This is so plainly terrible it is funny.
+This was what one of the frontier AI models decided to do about 1 month ago,
+at the same time while similar models are were cracking previously unsolved math problems.</p>
+<p>I like to imagine that a human engineer would not make this trivial
+mistake, unless as a form of malicious compliance.
+At least most humans should realize that it is probably a bad idea to
+pack a vast number of items into a gigantic JSON blob, eliminating the whole
+reason for using a database to begin with.</p>
+<h2>My view on coding with LLMs</h2>
+<p>It seems like hallucinations and weird/stupid decisions are a fundamental problem
+for LLMs which cannot be completely solved. I don't personally trust any LLM-produced
+code without reading it myself.</p>
+<p>With that being said, LLMs have reached a point where they are genuinely
+useful for many tasks. Depending on how paranoid you are, not all code needs to be
+fully trusted to be useful. I run my vibe coded tools in containers which provides
+some additional security but it's not perfect. If an LLM got backdoored and inserted
+malicious code in my vibecoded tools it would still potentially cause much headache.</p>
+<p>I have been using LLMs as a debugging aid quite heavily
+and I think this has saved me a ton of time.
+Even though I personally don't think they are always good enough
+at solving bugs they are very good at tracking them down. If something fails and
+you can describe it to an LLM and point it to the code then it seems to have a high
+probability of finding the reason for the failure.</p>
+<p>Where LLMs start to fumble is in writing code. Although they can often fix a problem
+in code, they seem to like choosing sub-optimal solutions. For code
+architecture they are much worse. I have never seen pure vibe-coded solutions that have
+good architecture unless it's a very simple well-known problem.</p>
+<p>For code I care about I always carefully review, and often rewrite, any LLM code that I use.
+For stuff I don't care about, like disposable customized tools,
+I don't really care about the code quality and I'm happy to embrace full on vibe coding slop fest
+if it helps me solve some task faster and easier than if I did it myself.</p>
+<p>I have so far made several vibe-coded tools (mostly TUIs) and derived utility
+and joy out of using them. I have also found bugs and surprising design
+decisions in those vibe coded tools which would not have happened if I wrote
+the code myself, but I rate this a fine trade-off.</p>
+<p>I don't think vibe coding should be used in production but unfortunately this is the
+path of least resistance so it seems inevitable that we will end up with a ton
+of buggy vibe coded slop software out in the wild.</p>
+<p>Even past pure vibe coding the standards around LLM code will slip over time
+and since it is so easy to throw some LLM code together that seems functional
+and correct we will probably unintentionally end up relying on it more and
+more in important software systems.</p>
+<p>I very much dislike LLM-generated art and text. I haven't yet decided
+if I am hypocritical for using LLMs for coding. It feels different somehow
+to use LLMs for code vs art, and using it as a tool vs just letting LLMs generate everything.</p>
+        </main>
+        <footer>Posted on 2026-09-11<br/>Copyright &copy; Jesper Öqvist</footer>
+    </div>
+  </table>
+</body>
+</html>
