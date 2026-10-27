@@ -127,7 +127,7 @@ module refers to itself so the <code>Base.Base.Base.Base</code> part is equivale
 <code>Base</code>.</p>
 <p>Here is another strange example that works in Julia 1.9.2:</p>
 <div class="codehilite"><pre><span></span><code><span class="n">Main</span><span class="o">.</span><span class="n">Main</span><span class="o">=</span><span class="p">(</span><span class="o">..</span><span class="p">)</span><span class="o">=</span><span class="n">Main</span><span class="o">.</span><span class="n">Main</span>
-<span class="kn">import</span> <span class="nn">...Main....Main...</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">...Main....Main...</span>
 </code></pre></div>
         </main>
         <footer>Posted on 2022-10-27<br/>Copyright &copy; Jesper Öqvist</footer>

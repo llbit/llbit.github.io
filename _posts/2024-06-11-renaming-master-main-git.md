@@ -7,6 +7,8 @@ TL;DR: Add an alias for the current branch with this Bash one-liner:
 git symbolic-ref refs/heads/m refs/heads/$(git rev-parse --abbrev-ref HEAD)
 ```
 
+To automatically create the `m` alias, see the Git Hook section below.
+
 Git, and many source code hosting websites like GitHub and GitLab, decided
 to change the default branch name from `master` to `main` a few years ago. So
 new repositories have `main` as the mainline branch name and older repositories
@@ -73,3 +75,37 @@ git config --global alias.d diff
 
 I even have a Bash alias `g` for `git` so that I can type `g co m` instead
 of `git checkout master`.
+
+## Git Hook
+
+I found myself often using the branch alias oneliner and decided to make a
+post-checkout Git hook out of it so I don't have to copy-paste it everytime
+I check out a new repository:
+
+```bash
+#!/bin/sh
+
+# Preserve existing branch or alias named m:
+if git symbolic-ref -q refs/heads/m >/dev/null ||
+   git show-ref --verify --quiet refs/heads/m; then
+    exit 0
+fi
+
+# Make the alias m => master/main depending on which branch exists:
+for branch in master main; do
+    if git show-ref --verify --quiet "refs/heads/$branch"; then
+        git symbolic-ref refs/heads/m "refs/heads/$branch"
+        break
+    fi
+done
+
+exit 0
+```
+
+Save this file as e.g. `~/.config/git/hooks/post-checkout`, mark it executable
+and configure Git to use `~/.config/git/hooks` if not already configured:
+
+```
+chmod u+x ~/.config/git/hooks/post-checkout
+git config --global core.hooksPath ~/.config/git/hooks
+```

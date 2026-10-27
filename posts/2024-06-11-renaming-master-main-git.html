@@ -24,6 +24,7 @@
 <div class="codehilite"><pre><span></span><code>git<span class="w"> </span>symbolic-ref<span class="w"> </span>refs/heads/m<span class="w"> </span>refs/heads/<span class="k">$(</span>git<span class="w"> </span>rev-parse<span class="w"> </span>--abbrev-ref<span class="w"> </span>HEAD<span class="k">)</span>
 </code></pre></div>
 
+<p>To automatically create the <code>m</code> alias, see the Git Hook section below.</p>
 <p>Git, and many source code hosting websites like GitHub and GitLab, decided
 to change the default branch name from <code>master</code> to <code>main</code> a few years ago. So
 new repositories have <code>main</code> as the mainline branch name and older repositories
@@ -76,6 +77,34 @@ git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"
 
 <p>I even have a Bash alias <code>g</code> for <code>git</code> so that I can type <code>g co m</code> instead
 of <code>git checkout master</code>.</p>
+<h2>Git Hook</h2>
+<p>I found myself often using the branch alias oneliner and decided to make a
+post-checkout Git hook out of it so I don't have to copy-paste it everytime
+I check out a new repository:</p>
+<div class="codehilite"><pre><span></span><code><span class="ch">#!/bin/sh</span>
+
+<span class="c1"># Preserve existing branch or alias named m:</span>
+<span class="k">if</span><span class="w"> </span>git<span class="w"> </span>symbolic-ref<span class="w"> </span>-q<span class="w"> </span>refs/heads/m<span class="w"> </span>&gt;/dev/null<span class="w"> </span><span class="o">||</span>
+<span class="w">   </span>git<span class="w"> </span>show-ref<span class="w"> </span>--verify<span class="w"> </span>--quiet<span class="w"> </span>refs/heads/m<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="m">0</span>
+<span class="k">fi</span>
+
+<span class="c1"># Make the alias m =&gt; master/main depending on which branch exists:</span>
+<span class="k">for</span><span class="w"> </span>branch<span class="w"> </span><span class="k">in</span><span class="w"> </span>master<span class="w"> </span>main<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span>git<span class="w"> </span>show-ref<span class="w"> </span>--verify<span class="w"> </span>--quiet<span class="w"> </span><span class="s2">&quot;refs/heads/</span><span class="nv">$branch</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span>git<span class="w"> </span>symbolic-ref<span class="w"> </span>refs/heads/m<span class="w"> </span><span class="s2">&quot;refs/heads/</span><span class="nv">$branch</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="k">break</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="k">done</span>
+
+<span class="nb">exit</span><span class="w"> </span><span class="m">0</span>
+</code></pre></div>
+
+<p>Save this file as e.g. <code>~/.config/git/hooks/post-checkout</code>, mark it executable
+and configure Git to use <code>~/.config/git/hooks</code> if not already configured:</p>
+<div class="codehilite"><pre><span></span><code>chmod u+x ~/.config/git/hooks/post-checkout
+git config --global core.hooksPath ~/.config/git/hooks
+</code></pre></div>
         </main>
         <footer>Posted on 2024-06-11<br/>Copyright &copy; Jesper Öqvist</footer>
     </div>
