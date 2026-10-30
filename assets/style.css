@@ -136,5 +136,7 @@ footer a{
   margin-bottom: 1em;
 }
 .codehilite {
-  overflow: scroll;
+  overflow: auto;
+  color-scheme: dark;
+  scrollbar-width: thin;
 }
